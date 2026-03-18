@@ -52,3 +52,10 @@ VITE_API_BASE_URL=http://localhost:4000/api
 - Per-file collaboration rooms can be keyed by `projectId:fileId`.
 - CRDT (e.g. Yjs) can be integrated at the editor layer while still persisting snapshots via existing file APIs.
 
+## Phase 2 (real-time) – added
+
+- Socket.IO server is mounted on the backend HTTP server.
+- Clients join a room per file (`file:<fileId>`).
+- Live edits use a simple revision counter (`rev`) with last-write-wins semantics.
+- Cursor/selection positions are broadcast and rendered as Monaco decorations.
+

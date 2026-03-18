@@ -188,11 +188,28 @@ body {
   padding: 0.4rem 0.8rem;
   border-bottom: 1px solid #1f2937;
   background-color: #020617;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .editor-filename {
   font-size: 0.8rem;
   color: #e5e7eb;
+}
+
+.editor-meta {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.remote-cursor {
+  border-left: 2px solid #f97316;
+  margin-left: -1px;
+}
+
+.remote-selection {
+  background: rgba(249, 115, 22, 0.2);
 }
 
 .code-editor-root > .monaco-editor,

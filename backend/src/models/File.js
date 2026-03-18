@@ -4,6 +4,7 @@ const fileSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     content: { type: String, default: '' },
+    rev: { type: Number, default: 0 },
     projectId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Project',
