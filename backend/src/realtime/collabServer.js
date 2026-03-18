@@ -1,4 +1,5 @@
 const { Server } = require('socket.io');
+const { YSocketIO } = require('y-socket.io/dist/server');
 const File = require('../models/File');
 
 const ROOM_PREFIX = 'file:';
@@ -11,6 +12,11 @@ const createCollabServer = ({ httpServer, corsOrigin }) => {
       origin: corsOrigin || '*'
     }
   });
+
+  // Phase 3 (CRDT): Yjs sync + awareness over Socket.IO namespaces: /yjs|<room>
+  // This runs alongside the Phase 2 revision-based events for now.
+  const ysocketio = new YSocketIO(io);
+  ysocketio.initialize();
 
   // In-memory, per-file state. This is intentionally simple for Phase 2.
   // Phase 3 (CRDT) will replace this with shared document state (e.g. Yjs).

@@ -11,7 +11,6 @@ export default function App() {
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [revs, setRevs] = useState({});
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -24,11 +23,6 @@ export default function App() {
 
         const filesRes = await api.get(`/projects/${projectRes.data._id}/files`);
         setFiles(filesRes.data);
-        setRevs(
-          Object.fromEntries(
-            filesRes.data.map((f) => [f._id, typeof f.rev === 'number' ? f.rev : 0])
-          )
-        );
         if (filesRes.data.length > 0) {
           setActiveFileId(filesRes.data[0]._id);
         }
@@ -42,32 +36,13 @@ export default function App() {
     bootstrap();
   }, []);
 
-  useEffect(() => {
-    if (!activeFileId) return;
-    socket.emit('file:join', { fileId: activeFileId });
-    return () => {
-      socket.emit('file:leave', { fileId: activeFileId });
-    };
-  }, [activeFileId]);
-
-  useEffect(() => {
-    const onAck = (payload) => {
-      if (!payload?.fileId || typeof payload.rev !== 'number') return;
-      setRevs((prev) => ({ ...prev, [payload.fileId]: payload.rev }));
-    };
-    socket.on('file:ack', onAck);
-    return () => socket.off('file:ack', onAck);
-  }, []);
+  // Phase 3 (CRDT) uses Yjs + y-socket.io directly. The Phase 2 Socket.IO events
+  // remain on the server, but the UI no longer depends on them for content sync.
 
   const handleRefreshFiles = async () => {
     if (!project) return;
     const res = await api.get(`/projects/${project._id}/files`);
     setFiles(res.data);
-    setRevs((prev) => {
-      const next = { ...prev };
-      for (const f of res.data) next[f._id] = typeof f.rev === 'number' ? f.rev : next[f._id] || 0;
-      return next;
-    });
   };
 
   const handleCreateFile = async (name) => {
@@ -96,9 +71,8 @@ export default function App() {
     await handleRefreshFiles();
   };
 
-  const handleUpdateFileContent = async (fileId, content) => {
-    const baseRev = revs[fileId] ?? 0;
-    socket.emit('file:change', { fileId, content, baseRev });
+  const handlePersistFileContent = async (fileId, content) => {
+    await api.put(`/files/${fileId}`, { content });
     setFiles((prev) => prev.map((f) => (f._id === fileId ? { ...f, content } : f)));
   };
 
@@ -129,22 +103,8 @@ export default function App() {
             <CodeEditor
               key={activeFile._id}
               file={activeFile}
-              socket={socket}
-              rev={revs[activeFile._id] ?? 0}
-              onRemoteSnapshot={(content, rev) => {
-                setFiles((prev) =>
-                  prev.map((f) => (f._id === activeFile._id ? { ...f, content } : f))
-                );
-                setRevs((prev) => ({ ...prev, [activeFile._id]: rev }));
-              }}
-              onRemoteChange={(content, rev) => {
-                setFiles((prev) =>
-                  prev.map((f) => (f._id === activeFile._id ? { ...f, content } : f))
-                );
-                setRevs((prev) => ({ ...prev, [activeFile._id]: rev }));
-              }}
-              onChangeContent={(content) =>
-                handleUpdateFileContent(activeFile._id, content)
+              onPersistContent={(content) =>
+                handlePersistFileContent(activeFile._id, content)
               }
               readOnly={isInitializing}
             />
