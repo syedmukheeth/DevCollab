@@ -6,7 +6,6 @@ import { MonacoBinding } from 'y-monaco';
 
 export function CodeEditor({
   file,
-  onPersistContent,
   readOnly
 }) {
   const editorRef = useRef(null);
@@ -15,11 +14,9 @@ export function CodeEditor({
   const ydocRef = useRef(null);
   const providerRef = useRef(null);
   const bindingRef = useRef(null);
-  const persistTimerRef = useRef(null);
 
   useEffect(() => {
     return () => {
-      if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
       bindingRef.current?.destroy?.();
       providerRef.current?.destroy?.();
       ydocRef.current?.destroy?.();
@@ -66,21 +63,6 @@ export function CodeEditor({
             provider.awareness
           );
           bindingRef.current = binding;
-
-          const schedulePersist = () => {
-            if (!onPersistContent) return;
-            if (persistTimerRef.current) clearTimeout(persistTimerRef.current);
-            persistTimerRef.current = setTimeout(() => {
-              persistTimerRef.current = null;
-              onPersistContent(ytext.toString());
-            }, 800);
-          };
-
-          ytext.observe(schedulePersist);
-          provider.on('status', () => schedulePersist());
-          editor.onDidDispose(() => {
-            ytext.unobserve(schedulePersist);
-          });
         }}
         options={{
           readOnly,

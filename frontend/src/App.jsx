@@ -71,11 +71,6 @@ export default function App() {
     await handleRefreshFiles();
   };
 
-  const handlePersistFileContent = async (fileId, content) => {
-    await api.put(`/files/${fileId}`, { content });
-    setFiles((prev) => prev.map((f) => (f._id === fileId ? { ...f, content } : f)));
-  };
-
   const activeFile = files.find((f) => f._id === activeFileId) || null;
 
   return (
@@ -103,9 +98,6 @@ export default function App() {
             <CodeEditor
               key={activeFile._id}
               file={activeFile}
-              onPersistContent={(content) =>
-                handlePersistFileContent(activeFile._id, content)
-              }
               readOnly={isInitializing}
             />
           ) : (
