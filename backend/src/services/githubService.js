@@ -45,9 +45,9 @@ const getOrResolveOwner = async (octokit, project) => {
   return authUser.data.login;
 };
 
-const createRepoIfNeeded = async ({ projectId }) => {
+const createRepoIfNeeded = async ({ projectId, ownerId }) => {
   const octokit = getOctokit();
-  const project = await Project.findById(projectId);
+  const project = await Project.findOne({ _id: projectId, ownerId });
   if (!project) throw new ApiError(404, 'Project not found');
 
   const owner = await getOrResolveOwner(octokit, project);
@@ -120,12 +120,12 @@ const ensureBranchExists = async ({ octokit, owner, repo, defaultBranch, branch 
   });
 };
 
-const commitProjectToBranch = async ({ projectId, branch, message }) => {
+const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) => {
   const octokit = getOctokit();
-  const project = await Project.findById(projectId);
+  const project = await Project.findOne({ _id: projectId, ownerId });
   if (!project) throw new ApiError(404, 'Project not found');
 
-  const { owner, repo, defaultBranch, baseDir } = await createRepoIfNeeded({ projectId });
+  const { owner, repo, defaultBranch, baseDir } = await createRepoIfNeeded({ projectId, ownerId });
 
   // If branch is not provided, fall back to default.
   const targetBranch = branch || defaultBranch;

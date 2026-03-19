@@ -66,7 +66,10 @@ export function CodeEditor({
 
           const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
           const room = `file:${file._id}`;
-          const provider = new SocketIOProvider(socketUrl, room, ydoc);
+          const token = window.localStorage.getItem('devcollab-token');
+          const provider = new SocketIOProvider(socketUrl, room, ydoc, {
+            auth: token ? { token } : {}
+          });
           providerRef.current = provider;
 
           // Presence: MonacoBinding uses Yjs Awareness metadata.

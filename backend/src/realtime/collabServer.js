@@ -38,7 +38,15 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
 
   // Phase 3 (CRDT): Yjs sync + awareness over Socket.IO namespaces: /yjs|<room>
   // This runs alongside the Phase 2 revision-based events for now.
-  const ysocketio = new YSocketIO(io);
+  const ysocketio = new YSocketIO(io, {
+    authenticate: (handshake) => {
+      const { verifyAuthToken } = require('../utils/authToken');
+      const token = handshake?.auth?.token;
+      const secret = process.env.SESSION_SECRET;
+      const verified = verifyAuthToken({ token, secret });
+      return verified.ok;
+    }
+  });
   ysocketio.initialize();
 
   // --- Mongo-backed Yjs snapshot persistence ---

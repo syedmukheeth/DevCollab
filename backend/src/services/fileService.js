@@ -1,26 +1,27 @@
 const File = require('../models/File');
 const ApiError = require('../utils/ApiError');
-const { getProjectById } = require('./projectService');
+const { getProjectByIdForOwner } = require('./projectService');
 
-const createFile = async ({ projectId, name, content = '' }) => {
+const createFile = async ({ projectId, ownerId, name, content = '' }) => {
   if (!name) {
     throw new ApiError(400, 'File name is required');
   }
-  await getProjectById(projectId);
+  await getProjectByIdForOwner(projectId, ownerId);
   const file = await File.create({ name, content, projectId });
   return file;
 };
 
-const getFileById = async (fileId) => {
+const getFileByIdForOwner = async (fileId, ownerId) => {
   const file = await File.findById(fileId);
   if (!file) {
     throw new ApiError(404, 'File not found');
   }
+  await getProjectByIdForOwner(file.projectId, ownerId);
   return file;
 };
 
-const updateFile = async (fileId, { name, content }) => {
-  const file = await getFileById(fileId);
+const updateFile = async (fileId, ownerId, { name, content }) => {
+  const file = await getFileByIdForOwner(fileId, ownerId);
   if (typeof name !== 'undefined') {
     file.name = name;
   }
@@ -31,14 +32,14 @@ const updateFile = async (fileId, { name, content }) => {
   return file;
 };
 
-const deleteFile = async (fileId) => {
-  const file = await getFileById(fileId);
+const deleteFile = async (fileId, ownerId) => {
+  const file = await getFileByIdForOwner(fileId, ownerId);
   await file.deleteOne();
 };
 
 module.exports = {
   createFile,
-  getFileById,
+  getFileByIdForOwner,
   updateFile,
   deleteFile
 };

@@ -12,6 +12,7 @@ const projectRoutes = require('./routes/projectRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const { createCollabServer } = require('./realtime/collabServer');
 const githubRoutes = require('./routes/githubRoutes');
+const authRoutes = require('./routes/authRoutes');
 
 const env = parseEnv();
 
@@ -19,7 +20,8 @@ const app = express();
 
 app.use(
   cors({
-    origin: env.CLIENT_ORIGIN || '*'
+    origin: env.CLIENT_ORIGIN || '*',
+    credentials: false
   })
 );
 app.use(helmet());
@@ -38,6 +40,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api', fileRoutes);
 app.use('/api', githubRoutes);

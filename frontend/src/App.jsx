@@ -20,17 +20,23 @@ export default function App() {
   useEffect(() => {
     const bootstrap = async () => {
       try {
-        // For phase 1, always create a fresh project on load.
-        const projectRes = await api.post('/projects', {
-          name: DEFAULT_PROJECT_NAME
-        });
-        setProject(projectRes.data);
-
-        const filesRes = await api.get(`/projects/${projectRes.data._id}/files`);
-        setFiles(filesRes.data);
-        if (filesRes.data.length > 0) {
-          setActiveFileId(filesRes.data[0]._id);
+        const authRes = await api.post('/auth/anonymous', {});
+        if (authRes.data?.token) {
+          window.localStorage.setItem('devcollab-token', authRes.data.token);
         }
+
+        const projectsRes = await api.get('/projects');
+        let activeProject = projectsRes.data?.[0] || null;
+        if (!activeProject) {
+          const created = await api.post('/projects', { name: DEFAULT_PROJECT_NAME });
+          activeProject = created.data;
+        }
+
+        setProject(activeProject);
+
+        const filesRes = await api.get(`/projects/${activeProject._id}/files`);
+        setFiles(filesRes.data);
+        if (filesRes.data.length > 0) setActiveFileId(filesRes.data[0]._id);
       } catch (err) {
         // eslint-disable-next-line no-console
         console.error(err);
