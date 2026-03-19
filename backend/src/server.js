@@ -3,18 +3,36 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const http = require('http');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
+const { parseEnv } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const projectRoutes = require('./routes/projectRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const { createCollabServer } = require('./realtime/collabServer');
 const githubRoutes = require('./routes/githubRoutes');
 
+const env = parseEnv();
+
 const app = express();
 
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
+app.use(
+  cors({
+    origin: env.CLIENT_ORIGIN || '*'
+  })
+);
+app.use(helmet());
 app.use(express.json());
 app.use(morgan('dev'));
+app.use(
+  rateLimit({
+    windowMs: 60 * 1000,
+    limit: 600,
+    standardHeaders: true,
+    legacyHeaders: false
+  })
+);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
@@ -27,16 +45,13 @@ app.use('/api', githubRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 4000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/devcollab';
-
-connectDB(MONGO_URI).then(() => {
+connectDB(env.MONGO_URI).then(() => {
   const httpServer = http.createServer(app);
   Promise.resolve(
     createCollabServer({
       httpServer,
-      corsOrigin: process.env.SOCKET_ORIGIN || process.env.CLIENT_ORIGIN || '*',
-      redisUrl: process.env.REDIS_URL
+      corsOrigin: env.SOCKET_ORIGIN || env.CLIENT_ORIGIN || '*',
+      redisUrl: env.REDIS_URL
     })
   )
     .catch((err) => {
@@ -45,9 +60,9 @@ connectDB(MONGO_URI).then(() => {
       throw err;
     })
     .then(() => {
-      httpServer.listen(PORT, () => {
+      httpServer.listen(env.PORT, () => {
         // eslint-disable-next-line no-console
-        console.log(`Server running on port ${PORT}`);
+        console.log(`Server running on port ${env.PORT}`);
       });
     });
 });
