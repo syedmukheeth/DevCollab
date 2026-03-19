@@ -26,6 +26,27 @@ export function CodeEditor({
     };
   }, []);
 
+  const getOrCreateLocalUser = () => {
+    try {
+      const existing = window.localStorage.getItem('devcollab-user');
+      if (existing) return JSON.parse(existing);
+    } catch (e) {
+      // ignore
+    }
+    const id = Math.random().toString(16).slice(2);
+    const name = `User-${id.slice(0, 6)}`;
+    const color = `#${Math.floor(Math.random() * 16777215)
+      .toString(16)
+      .padStart(6, '0')}`;
+    const next = { name, color };
+    try {
+      window.localStorage.setItem('devcollab-user', JSON.stringify(next));
+    } catch (e) {
+      // ignore
+    }
+    return next;
+  };
+
   return (
     <div className="code-editor-root">
       <div className="editor-header">
@@ -47,6 +68,10 @@ export function CodeEditor({
           const room = `file:${file._id}`;
           const provider = new SocketIOProvider(socketUrl, room, ydoc);
           providerRef.current = provider;
+
+          // Presence: MonacoBinding uses Yjs Awareness metadata.
+          const localUser = getOrCreateLocalUser();
+          provider.awareness.setLocalStateField('user', localUser);
 
           const ytext = ydoc.getText('monaco');
           if (ytext.length === 0 && (file.content || '').length > 0) {
