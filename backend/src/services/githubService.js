@@ -51,6 +51,8 @@ const createRepoIfNeeded = async ({ projectId }) => {
   if (!project) throw new ApiError(404, 'Project not found');
 
   const owner = await getOrResolveOwner(octokit, project);
+  const authUser = await octokit.users.getAuthenticated();
+  const authLogin = authUser.data.login;
   const repoPrefix = getEnv('GITHUB_REPO_PREFIX') || 'devcollab-';
   const defaultBranch = getEnv('GITHUB_DEFAULT_BRANCH') || project.github?.defaultBranch || 'main';
   const baseDir = getEnv('GITHUB_BASE_DIR') || 'devcollab';
@@ -60,12 +62,22 @@ const createRepoIfNeeded = async ({ projectId }) => {
   const repoName = project.github?.repo || `${repoPrefix}${project._id}`;
 
   if (!project.github?.repo) {
-    await octokit.repos.createForAuthenticatedUser({
-      name: repoName,
-      private: privateRepo,
-      auto_init: autoInit,
-      description: project.description || undefined
-    });
+    if (owner === authLogin) {
+      await octokit.repos.createForAuthenticatedUser({
+        name: repoName,
+        private: privateRepo,
+        auto_init: autoInit,
+        description: project.description || undefined
+      });
+    } else {
+      await octokit.repos.createInOrg({
+        org: owner,
+        name: repoName,
+        private: privateRepo,
+        auto_init: autoInit,
+        description: project.description || undefined
+      });
+    }
 
     project.github = {
       owner,
