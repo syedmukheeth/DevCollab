@@ -26,6 +26,12 @@ body {
   border-bottom: 1px solid #374151;
 }
 
+.app-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
 .app-title {
   font-weight: 600;
   letter-spacing: 0.08em;
@@ -57,6 +63,85 @@ body {
   background-color: #020617;
   display: flex;
   flex-direction: column;
+}
+
+.git-panel-wrapper {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid #1f2937;
+}
+
+.git-panel {
+  background-color: #0b1220;
+  border: 1px solid #1f2937;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  color: #e5e7eb;
+}
+
+.git-panel-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9ca3af;
+  margin-bottom: 0.5rem;
+}
+
+.git-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 0.5rem;
+}
+
+.git-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.git-label {
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+.git-input {
+  background-color: #020617;
+  border-radius: 0.35rem;
+  border: 1px solid #1f2937;
+  padding: 0.35rem 0.45rem;
+  color: #e5e7eb;
+  font-size: 0.8rem;
+}
+
+.git-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.65rem;
+}
+
+.git-btn {
+  flex: 1;
+  border: none;
+  background-color: #1f2937;
+  color: #e5e7eb;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.45rem;
+  cursor: pointer;
+}
+
+.git-btn.primary {
+  background-color: #2563eb;
+}
+
+.git-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.git-status {
+  margin-top: 0.55rem;
+  font-size: 0.8rem;
+  color: #93c5fd;
+  word-break: break-word;
 }
 
 .empty-state {

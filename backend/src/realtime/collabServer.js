@@ -3,17 +3,28 @@ const { YSocketIO } = require('y-socket.io/dist/server');
 const Y = require('yjs');
 const File = require('../models/File');
 const YjsSnapshot = require('../models/YjsSnapshot');
+const { createClient } = require('redis');
+const { createAdapter } = require('@socket.io/redis-adapter');
 
 const ROOM_PREFIX = 'file:';
 
 const makeRoom = (fileId) => `${ROOM_PREFIX}${fileId}`;
 
-const createCollabServer = ({ httpServer, corsOrigin }) => {
+const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
   const io = new Server(httpServer, {
     cors: {
       origin: corsOrigin || '*'
     }
   });
+
+  // Phase 5 (scaling): use Socket.IO Redis adapter so events broadcast across processes.
+  if (redisUrl) {
+    const pubClient = createClient({ url: redisUrl });
+    const subClient = pubClient.duplicate();
+    await pubClient.connect();
+    await subClient.connect();
+    io.adapter(createAdapter(pubClient, subClient));
+  }
 
   // Phase 3 (CRDT): Yjs sync + awareness over Socket.IO namespaces: /yjs|<room>
   // This runs alongside the Phase 2 revision-based events for now.

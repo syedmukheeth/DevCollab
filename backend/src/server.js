@@ -8,6 +8,7 @@ const { errorHandler, notFound } = require('./middleware/errorHandler');
 const projectRoutes = require('./routes/projectRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const { createCollabServer } = require('./realtime/collabServer');
+const githubRoutes = require('./routes/githubRoutes');
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.get('/health', (req, res) => {
 
 app.use('/api/projects', projectRoutes);
 app.use('/api', fileRoutes);
+app.use('/api', githubRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -30,14 +32,23 @@ const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/devcollab'
 
 connectDB(MONGO_URI).then(() => {
   const httpServer = http.createServer(app);
-  createCollabServer({
-    httpServer,
-    corsOrigin: process.env.SOCKET_ORIGIN || process.env.CLIENT_ORIGIN || '*'
-  });
-
-  httpServer.listen(PORT, () => {
-    // eslint-disable-next-line no-console
-    console.log(`Server running on port ${PORT}`);
-  });
+  Promise.resolve(
+    createCollabServer({
+      httpServer,
+      corsOrigin: process.env.SOCKET_ORIGIN || process.env.CLIENT_ORIGIN || '*',
+      redisUrl: process.env.REDIS_URL
+    })
+  )
+    .catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to initialize Socket.IO Redis adapter', err);
+      throw err;
+    })
+    .then(() => {
+      httpServer.listen(PORT, () => {
+        // eslint-disable-next-line no-console
+        console.log(`Server running on port ${PORT}`);
+      });
+    });
 });
 

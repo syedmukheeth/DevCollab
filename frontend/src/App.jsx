@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { FileExplorer } from './components/FileExplorer.jsx';
 import { CodeEditor } from './components/CodeEditor.jsx';
+import { GitPanel } from './components/GitPanel.jsx';
 import { api } from './lib/api.js';
-import { socket } from './lib/socket.js';
 
 const DEFAULT_PROJECT_NAME = 'My DevCollab Project';
 
@@ -11,6 +11,11 @@ export default function App() {
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [gitBranch, setGitBranch] = useState('main');
+  const [gitMessage, setGitMessage] = useState('Update from DevCollab');
+  const [gitStatus, setGitStatus] = useState('');
+  const [loadingGitInit, setLoadingGitInit] = useState(false);
+  const [loadingGitCommit, setLoadingGitCommit] = useState(false);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -73,12 +78,56 @@ export default function App() {
 
   const activeFile = files.find((f) => f._id === activeFileId) || null;
 
+  const handleGitInit = async () => {
+    if (!project) return;
+    setLoadingGitInit(true);
+    setGitStatus('');
+    try {
+      const res = await api.post(
+        `/projects/${project._id}/github/init`,
+        {}
+      );
+      setGitStatus(
+        `Repo ready: ${res.data.owner}/${res.data.repo} (branch: ${res.data.defaultBranch})`
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      setGitStatus(err?.response?.data?.message || 'GitHub init failed');
+    } finally {
+      setLoadingGitInit(false);
+    }
+  };
+
+  const handleGitCommit = async () => {
+    if (!project) return;
+    setLoadingGitCommit(true);
+    setGitStatus('');
+    try {
+      const res = await api.post(
+        `/projects/${project._id}/github/commit`,
+        { branch: gitBranch, message: gitMessage }
+      );
+      setGitStatus(
+        `Committed ${res.data.commitSha.slice(0, 7)} to ${res.data.branch}`
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error(err);
+      setGitStatus(err?.response?.data?.message || 'Commit failed');
+    } finally {
+      setLoadingGitCommit(false);
+    }
+  };
+
   return (
     <div className="app-root">
       <header className="app-header">
-        <div className="app-title">DevCollab</div>
-        <div className="app-subtitle">
-          {project ? project.name : 'Initializing project...'}
+        <div className="app-header-left">
+          <div className="app-title">DevCollab</div>
+          <div className="app-subtitle">
+            {project ? project.name : 'Initializing project...'}
+          </div>
         </div>
       </header>
       <div className="app-body">
@@ -94,6 +143,20 @@ export default function App() {
           />
         </aside>
         <main className="editor-container">
+          <div className="git-panel-wrapper">
+            <GitPanel
+              disabled={!project || isInitializing}
+              branch={gitBranch}
+              setBranch={setGitBranch}
+              message={gitMessage}
+              setMessage={setGitMessage}
+              status={gitStatus}
+              onInit={handleGitInit}
+              onCommit={handleGitCommit}
+              loadingInit={loadingGitInit}
+              loadingCommit={loadingGitCommit}
+            />
+          </div>
           {activeFile ? (
             <CodeEditor
               key={activeFile._id}
