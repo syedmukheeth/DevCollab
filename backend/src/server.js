@@ -36,9 +36,7 @@ app.use(
   })
 );
 
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
@@ -48,25 +46,57 @@ app.use('/api', githubRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-connectDB(env.MONGO_URI).then(() => {
+let mongoReady = false;
+let redisReady = null; // null=disabled
+
+app.get('/ready', (req, res) => {
+  const ok = mongoReady && (redisReady === null || redisReady === true);
+  res.status(ok ? 200 : 503).json({
+    status: ok ? 'ready' : 'not_ready',
+    mongo: mongoReady ? 'up' : 'down',
+    redis: redisReady === null ? 'disabled' : redisReady ? 'up' : 'down'
+  });
+});
+
+const start = async () => {
+  await connectDB(env.MONGO_URI);
+  mongoReady = true;
+
   const httpServer = http.createServer(app);
-  Promise.resolve(
-    createCollabServer({
+
+  try {
+    const { redisConnected } = await createCollabServer({
       httpServer,
       corsOrigin: env.SOCKET_ORIGIN || env.CLIENT_ORIGIN || '*',
       redisUrl: env.REDIS_URL
-    })
-  )
-    .catch((err) => {
-      // eslint-disable-next-line no-console
-      console.error('Failed to initialize Socket.IO Redis adapter', err);
-      throw err;
-    })
-    .then(() => {
-      httpServer.listen(env.PORT, () => {
-        // eslint-disable-next-line no-console
-        console.log(`Server running on port ${env.PORT}`);
-      });
     });
+    redisReady = typeof redisConnected === 'boolean' ? redisConnected : null;
+  } catch (err) {
+    redisReady = false;
+    throw err;
+  }
+
+  httpServer.listen(env.PORT, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Server running on port ${env.PORT}`);
+  });
+
+  const shutdown = () => {
+    // eslint-disable-next-line no-console
+    console.log('Shutting down...');
+    httpServer.close(() => {
+      process.exit(0);
+    });
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
+};
+
+start().catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error(err);
+  process.exit(1);
 });
 

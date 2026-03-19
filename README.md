@@ -1,6 +1,6 @@
-# DevCollab (Phase 1)
+# DevCollab
 
-DevCollab is a real-time collaborative coding platform (MERN stack). This repository currently contains the Phase 1 foundation: project/file management, Monaco-based editor, and a VS Code-style UI.
+DevCollab is a real-time collaborative coding platform (MERN stack) with CRDT-based collaboration (Yjs) and GitHub integration.
 
 ## Backend
 
@@ -21,18 +21,23 @@ npm run dev
 
 Required production env:
 - `MONGO_URI`
+- `SESSION_SECRET` (min 16 chars)
 - `SOCKET_ORIGIN` / `CLIENT_ORIGIN` (CORS)
 - `REDIS_URL` (optional; enables Phase 5 scaling)
 - `GITHUB_TOKEN` (optional; enables Phase 4 GitHub actions)
 
 Key endpoints (base: `/api`):
 
+- `POST /auth/anonymous` – create an anonymous user + token
 - `POST /projects` – create project
+- `GET /projects` – list my projects
 - `GET /projects/:projectId/files` – list files for a project
 - `POST /projects/:projectId/files` – create file
 - `GET /files/:fileId` – get single file
 - `PUT /files/:fileId` – update name/content
 - `DELETE /files/:fileId` – delete file
+- `POST /projects/:projectId/github/init` – init GitHub repo
+- `POST /projects/:projectId/github/commit` – commit & push current CRDT state
 
 ## Frontend
 
@@ -55,7 +60,25 @@ Configure the API base URL if needed via:
 VITE_API_BASE_URL=http://localhost:4000/api
 ```
 
-## Notes for future phases
+Also set:
+
+```bash
+VITE_SOCKET_URL=http://localhost:4000
+```
+
+## Docker (local production-like)
+
+If you have Docker installed:
+
+```bash
+docker compose up --build
+```
+
+- Frontend: `http://localhost:5173`
+- Backend: `http://localhost:4000/health`
+- Readiness: `http://localhost:4000/ready`
+
+## Notes
 
 - WebSocket server (Socket.IO) can be mounted on the same Express app.
 - Per-file collaboration rooms can be keyed by `projectId:fileId`.

@@ -18,6 +18,7 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
   });
 
   // Phase 5 (scaling): use Socket.IO Redis adapter so events broadcast across processes.
+  let redisConnected = null;
   if (redisUrl) {
     const url = new URL(redisUrl);
     const isTls = url.protocol === 'rediss:';
@@ -34,6 +35,7 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
     await pubClient.connect();
     await subClient.connect();
     io.adapter(createAdapter(pubClient, subClient));
+    redisConnected = true;
   }
 
   // Phase 3 (CRDT): Yjs sync + awareness over Socket.IO namespaces: /yjs|<room>
@@ -121,7 +123,7 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
     persistRoomSoon(doc);
   });
 
-  return { io };
+  return { io, redisConnected };
 };
 
 module.exports = { createCollabServer };
