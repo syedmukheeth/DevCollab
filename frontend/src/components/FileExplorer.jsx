@@ -7,7 +7,8 @@ export function FileExplorer({
   onCreateFile,
   onDeleteFile,
   onRenameFile,
-  disabled
+  disabled,
+  presenceStates = []
 }) {
   const [newFileName, setNewFileName] = useState('');
   const [editingFileId, setEditingFileId] = useState(null);
@@ -21,7 +22,7 @@ export function FileExplorer({
   };
 
   const startRename = (file) => {
-    setEditingFileId(file._id);
+    setEditingFileId(file.id);
     setEditingName(file.name);
   };
 
@@ -39,11 +40,11 @@ export function FileExplorer({
       <div className="file-explorer-header">Files</div>
       <div className="file-list">
         {files.map((file) => {
-          const isActive = file._id === activeFileId;
-          const isEditing = editingFileId === file._id;
+          const isActive = file.id === activeFileId;
+          const isEditing = editingFileId === file.id;
           return (
             <div
-              key={file._id}
+              key={file.id}
               className={`file-item ${isActive ? 'active' : ''}`}
             >
               {isEditing ? (
@@ -51,9 +52,9 @@ export function FileExplorer({
                   className="file-rename-input"
                   value={editingName}
                   onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={() => commitRename(file._id)}
+                  onBlur={() => commitRename(file.id)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitRename(file._id);
+                    if (e.key === 'Enter') commitRename(file.id);
                     if (e.key === 'Escape') {
                       setEditingFileId(null);
                       setEditingName('');
@@ -62,13 +63,20 @@ export function FileExplorer({
                   autoFocus
                 />
               ) : (
-                <button
-                  type="button"
-                  className="file-name-button"
-                  onClick={() => onSelectFile(file._id)}
-                >
-                  {file.name}
-                </button>
+                <>
+                  <div className="file-presence">
+                    {(presenceStates || []).filter(s => s.activeFile === file.id && s.user).map((u, i) => (
+                      <div key={i} className="file-presence-dot" style={{ backgroundColor: u.user.color }} title={u.user.name} />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="file-name-button"
+                    onClick={() => onSelectFile(file.id)}
+                  >
+                    {file.name}
+                  </button>
+                </>
               )}
               {!isEditing && (
                 <div className="file-actions">
@@ -84,7 +92,7 @@ export function FileExplorer({
                     type="button"
                     className="icon-button"
                     title="Delete file"
-                    onClick={() => onDeleteFile(file._id)}
+                    onClick={() => onDeleteFile(file.id)}
                   >
                     🗑
                   </button>

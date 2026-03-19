@@ -65,7 +65,7 @@ export function CodeEditor({
           ydocRef.current = ydoc;
 
           const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
-          const room = `file:${file._id}`;
+          const room = `file:${file.id}`;
           const token = window.localStorage.getItem('devcollab-token');
           const provider = new SocketIOProvider(socketUrl, room, ydoc, {
             auth: token ? { token } : {}
@@ -91,6 +91,12 @@ export function CodeEditor({
             provider.awareness
           );
           bindingRef.current = binding;
+
+          editor.onDidScrollChange((e) => {
+            provider.awareness.setLocalStateField('scroll', e.scrollTop);
+          });
+          
+          window.getEditorCode = () => editor.getValue();
         }}
         options={{
           readOnly,

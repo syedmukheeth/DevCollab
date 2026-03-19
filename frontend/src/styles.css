@@ -302,3 +302,163 @@ body {
   flex: 1;
 }
 
+.presence-bar {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.presence-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #374151;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  position: relative;
+  cursor: default;
+}
+
+.presence-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  border: 2px solid #111827;
+}
+
+.file-presence {
+  display: flex;
+  gap: 2px;
+  margin-right: 4px;
+}
+
+.file-presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.interview-timer {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: monospace;
+}
+
+.timer-label {
+  font-size: 0.65rem;
+  color: #9ca3af;
+  text-transform: uppercase;
+}
+
+.timer-value {
+  font-size: 1.1rem;
+  color: #10b981;
+  font-weight: bold;
+}
+
+.interview-timer.urgent .timer-value {
+  color: #ef4444;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.playback-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.playback-modal {
+  width: 90%;
+  height: 90%;
+  background-color: #020617;
+  border: 1px solid #1f2937;
+  border-radius: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.playback-header {
+  padding: 1rem;
+  border-bottom: 1px solid #1f2937;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.playback-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.playback-controls {
+  padding: 1rem;
+  border-top: 1px solid #1f2937;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.playback-slider {
+  width: 100%;
+}
+
+.playback-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #9ca3af;
+}
+
+.github-user-badge {
+  font-size: 0.7rem;
+  background-color: #374151;
+  color: #fbbf24;
+  padding: 0.1rem 0.4rem;
+  border-radius: 9999px;
+  margin-left: 0.5rem;
+  border: 1px solid #4b5563;
+}
+
+.github-connect-prompt {
+  background-color: #1e293b;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.github-connect-prompt p {
+  font-size: 0.85rem;
+  color: #9ca3af;
+  margin-bottom: 1rem;
+}
+

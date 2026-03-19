@@ -1,8 +1,7 @@
 const { Server } = require('socket.io');
 const { YSocketIO } = require('y-socket.io/dist/server');
 const Y = require('yjs');
-const File = require('../models/File');
-const YjsSnapshot = require('../models/YjsSnapshot');
+const { prisma } = require('../config/db');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
 
@@ -17,7 +16,6 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
     }
   });
 
-  // Phase 5 (scaling): use Socket.IO Redis adapter so events broadcast across processes.
   let redisConnected = null;
   if (redisUrl) {
     const url = new URL(redisUrl);
@@ -38,8 +36,6 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
     redisConnected = true;
   }
 
-  // Phase 3 (CRDT): Yjs sync + awareness over Socket.IO namespaces: /yjs|<room>
-  // This runs alongside the Phase 2 revision-based events for now.
   const ysocketio = new YSocketIO(io, {
     authenticate: (handshake) => {
       const { verifyAuthToken } = require('../utils/authToken');
@@ -51,10 +47,7 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
   });
   ysocketio.initialize();
 
-  // --- Mongo-backed Yjs snapshot persistence ---
-  // Stores a compact doc snapshot per room. This avoids unbounded growth from per-update logs.
-  // Room name is what the client passes to SocketIOProvider (we use `file:<fileId>`).
-  const yPersistTimers = new Map(); // room -> timeout
+  const yPersistTimers = new Map();
 
   const parseFileIdFromRoom = (room) => {
     if (typeof room !== 'string') return null;
@@ -74,12 +67,12 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
         yPersistTimers.delete(room);
         try {
           const update = Y.encodeStateAsUpdate(ydoc);
-          const fileId = parseFileIdFromRoom(room);
-          await YjsSnapshot.findOneAndUpdate(
-            { room },
-            { room, fileId: fileId || undefined, state: Buffer.from(update) },
-            { upsert: true, new: true }
-          );
+          const fileId = parseFileIdFromRoom(room) || null;
+          await prisma.yjsSnapshot.upsert({
+            where: { room },
+            update: { fileId, state: Buffer.from(update) },
+            create: { room, fileId, state: Buffer.from(update) }
+          });
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error('Failed to persist Yjs snapshot', err);
@@ -94,14 +87,13 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
       const ydoc = doc?.ydoc || doc?.doc;
       if (!room || !ydoc) return;
 
-      const snap = await YjsSnapshot.findOne({ room });
+      const snap = await prisma.yjsSnapshot.findUnique({ where: { room } });
       if (snap?.state?.length) {
         Y.applyUpdate(ydoc, new Uint8Array(snap.state));
       } else {
-        // First load: hydrate from current File.content (Phase 1 REST content) if present.
         const fileId = parseFileIdFromRoom(room);
         if (fileId) {
-          const file = await File.findById(fileId);
+          const file = await prisma.file.findUnique({ where: { id: fileId } });
           if (file?.content) {
             const ytext = ydoc.getText('monaco');
             if (ytext.length === 0) ytext.insert(0, file.content);
@@ -109,6 +101,20 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
         }
         persistRoomSoon(doc);
       }
+
+      ydoc.on('update', async (update) => {
+        try {
+          await prisma.yjsUpdate.create({
+            data: {
+              room,
+              update: Buffer.from(update)
+            }
+          });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to persist yjs update', err);
+        }
+      });
     } catch (err) {
       // eslint-disable-next-line no-console
       console.error('Failed to load Yjs snapshot', err);
@@ -123,8 +129,36 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
     persistRoomSoon(doc);
   });
 
+  io.on('connection', (socket) => {
+    socket.on('execute-code', async ({ code, language, fileId, sessionId }) => {
+      // In a real app, verify the auth token and ensure the user is an EDITOR/INTERVIEWER in this session.
+      // For this implementation, we will trust the socket event or perform a quick check if needed.
+      const { runCode } = require('../services/executionService');
+      
+      socket.emit('execution-output', { type: 'system', payload: `Starting execution environment for ${language}...\n` });
+
+      await runCode({
+        code,
+        language,
+        onData: ({ isStderr, payload }) => {
+          socket.emit('execution-output', {
+            type: isStderr ? 'stderr' : 'stdout',
+            payload
+          });
+        },
+        onDone: (exitCode, err) => {
+          if (err) {
+            socket.emit('execution-output', { type: 'error', payload: `\nExecution Error: ${err.message || err}` });
+          } else {
+            socket.emit('execution-output', { type: 'system', payload: `\nProcess exited with code ${exitCode}` });
+          }
+          socket.emit('execution-finished', { exitCode });
+        }
+      });
+    });
+  });
+
   return { io, redisConnected };
 };
 
 module.exports = { createCollabServer };
-

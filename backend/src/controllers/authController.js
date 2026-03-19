@@ -1,15 +1,13 @@
 const crypto = require('crypto');
-const User = require('../models/User');
+const { prisma } = require('../config/db');
 const { issueAuthToken } = require('../utils/authToken');
 
 const ensureAnonymous = async (req, res, next) => {
   try {
-    // Token-based auth: create a lightweight anonymous user once and reuse via localStorage on client.
-
     const name = `User-${crypto.randomBytes(3).toString('hex')}`;
-    const user = await User.create({ name });
+    const user = await prisma.user.create({ data: { name } });
     const token = issueAuthToken({
-      userId: user._id.toString(),
+      userId: user.id,
       secret: process.env.SESSION_SECRET,
       ttlSeconds: 60 * 60 * 24 * 7
     });

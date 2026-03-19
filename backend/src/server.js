@@ -13,6 +13,7 @@ const fileRoutes = require('./routes/fileRoutes');
 const { createCollabServer } = require('./realtime/collabServer');
 const githubRoutes = require('./routes/githubRoutes');
 const authRoutes = require('./routes/authRoutes');
+const sessionRoutes = require('./routes/sessionRoutes');
 
 const env = parseEnv();
 
@@ -42,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api', fileRoutes);
 app.use('/api', githubRoutes);
+app.use('/api/sessions', sessionRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -59,7 +61,7 @@ app.get('/ready', (req, res) => {
 });
 
 const start = async () => {
-  await connectDB(env.MONGO_URI);
+  await connectDB.connectDB();
   mongoReady = true;
 
   const httpServer = http.createServer(app);

@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String?
+  email     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects  Project[]
+  sessions  SessionUser[]
+  github    UserGitHub?
+}
+
+model UserGitHub {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  username     String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  ownerId     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner       User?    @relation(fields: [ownerId], references: [id])
+  files       File[]
+  sessions    Session[]
+
+  githubOwner         String?
+  githubRepo          String?
+  githubDefaultBranch String  @default("main")
+  githubCreatedAt     DateTime?
+}
+
+model File {
+  id        String   @id @default(uuid())
+  name      String
+  content   String   @default("")
+  rev       Int      @default(0)
+  projectId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  snapshots YjsSnapshot[]
+}
+
+model YjsSnapshot {
+  id           String   @id @default(uuid())
+  room         String   @unique
+  fileId       String?
+  state        Bytes
+  stateVersion Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  file         File?    @relation(fields: [fileId], references: [id], onDelete: Cascade)
+}
+
+model Session {
+  id            String   @id @default(uuid())
+  projectId     String
+  shareLink     String   @unique @default(uuid())
+  createdBy     String?
+  createdAt     DateTime @default(now())
+  expiresAt     DateTime?
+  status        String   @default("ACTIVE") // ACTIVE, ENDED
+  interviewMode Boolean  @default(false)
+
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  users         SessionUser[]
+}
+
+enum Role {
+  VIEWER
+  EDITOR
+  INTERVIEWER
+}
+
+model SessionUser {
+  id        String  @id @default(uuid())
+  sessionId String
+  userId    String
+  role      Role    @default(VIEWER)
+
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+}
+
+model YjsUpdate {
+  id        String   @id @default(uuid())
+  room      String
+  update    Bytes
+  createdAt DateTime @default(now())
+
+  @@index([room, createdAt])
+}
+

@@ -1,8 +1,6 @@
 const { Octokit } = require('@octokit/rest');
 const Y = require('yjs');
-const Project = require('../models/Project');
-const File = require('../models/File');
-const YjsSnapshot = require('../models/YjsSnapshot');
+const { prisma } = require('../config/db');
 const ApiError = require('../utils/ApiError');
 
 const getEnv = (name) => {
@@ -16,15 +14,22 @@ const normalizeBool = (v, fallback) => {
   return String(v).toLowerCase() === 'true';
 };
 
-const getOctokit = () => {
-  const token = getEnv('GITHUB_TOKEN');
-  if (!token) throw new ApiError(500, 'GITHUB_TOKEN is not configured');
+const getOctokit = (accessToken) => {
+  const token = accessToken || getEnv('GITHUB_TOKEN');
+  if (!token) throw new ApiError(500, 'GitHub authentication not configured');
   return new Octokit({ auth: token });
 };
 
+// Internal helper to get user's token
+const getUserToken = async (userId) => {
+  const github = await prisma.userGitHub.findUnique({ where: { userId } });
+  return github?.accessToken || null;
+};
+
+
 const getCurrentFileContentFromYjs = async (fileId) => {
   const room = `file:${fileId}`;
-  const snap = await YjsSnapshot.findOne({ room });
+  const snap = await prisma.yjsSnapshot.findUnique({ where: { room } });
   if (snap?.state?.length) {
     const doc = new Y.Doc();
     Y.applyUpdate(doc, new Uint8Array(snap.state));
@@ -32,13 +37,12 @@ const getCurrentFileContentFromYjs = async (fileId) => {
     return ytext.toString();
   }
 
-  // Fallback: Phase 1/2 compatibility if a snapshot doesn't exist yet.
-  const file = await File.findById(fileId);
+  const file = await prisma.file.findUnique({ where: { id: fileId } });
   return file?.content || '';
 };
 
 const getOrResolveOwner = async (octokit, project) => {
-  if (project?.github?.owner) return project.github.owner;
+  if (project?.githubOwner) return project.githubOwner;
   const ownerEnv = getEnv('GITHUB_OWNER');
   if (ownerEnv) return ownerEnv;
   const authUser = await octokit.users.getAuthenticated();
@@ -46,22 +50,24 @@ const getOrResolveOwner = async (octokit, project) => {
 };
 
 const createRepoIfNeeded = async ({ projectId, ownerId }) => {
-  const octokit = getOctokit();
-  const project = await Project.findOne({ _id: projectId, ownerId });
+  const accessToken = await getUserToken(ownerId);
+  const octokit = getOctokit(accessToken);
+  const project = await prisma.project.findFirst({ where: { id: projectId, ownerId } });
   if (!project) throw new ApiError(404, 'Project not found');
 
   const owner = await getOrResolveOwner(octokit, project);
   const authUser = await octokit.users.getAuthenticated();
   const authLogin = authUser.data.login;
   const repoPrefix = getEnv('GITHUB_REPO_PREFIX') || 'devcollab-';
-  const defaultBranch = getEnv('GITHUB_DEFAULT_BRANCH') || project.github?.defaultBranch || 'main';
+  const defaultBranch = getEnv('GITHUB_DEFAULT_BRANCH') || project.githubDefaultBranch || 'main';
   const baseDir = getEnv('GITHUB_BASE_DIR') || 'devcollab';
   const autoInit = normalizeBool(getEnv('GITHUB_AUTO_INIT'), true);
   const privateRepo = normalizeBool(getEnv('GITHUB_PRIVATE'), false);
 
-  const repoName = project.github?.repo || `${repoPrefix}${project._id}`;
+  const repoName = project.githubRepo || `${repoPrefix}${project.id}`;
 
-  if (!project.github?.repo) {
+  let updatedGithub = false;
+  if (!project.githubRepo) {
     if (owner === authLogin) {
       await octokit.repos.createForAuthenticatedUser({
         name: repoName,
@@ -79,22 +85,31 @@ const createRepoIfNeeded = async ({ projectId, ownerId }) => {
       });
     }
 
-    project.github = {
-      owner,
-      repo: repoName,
-      defaultBranch,
-      createdAt: new Date()
-    };
-    await project.save();
-  } else if (!project.github.defaultBranch) {
-    project.github.defaultBranch = defaultBranch;
-    await project.save();
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        githubOwner: owner,
+        githubRepo: repoName,
+        githubDefaultBranch: defaultBranch,
+        githubCreatedAt: new Date()
+      }
+    });
+    updatedGithub = true;
+  } else if (!project.githubDefaultBranch || project.githubDefaultBranch !== defaultBranch) {
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { githubDefaultBranch: defaultBranch }
+    });
+    updatedGithub = true;
   }
 
+  // Refresh project data if updated
+  const refreshedProject = updatedGithub ? await prisma.project.findFirst({ where: { id: projectId } }) : project;
+
   return {
-    owner: project.github.owner || owner,
-    repo: project.github.repo,
-    defaultBranch: project.github.defaultBranch || defaultBranch,
+    owner: refreshedProject.githubOwner || owner,
+    repo: refreshedProject.githubRepo,
+    defaultBranch: refreshedProject.githubDefaultBranch || defaultBranch,
     baseDir
   };
 };
@@ -121,13 +136,13 @@ const ensureBranchExists = async ({ octokit, owner, repo, defaultBranch, branch 
 };
 
 const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) => {
-  const octokit = getOctokit();
-  const project = await Project.findOne({ _id: projectId, ownerId });
+  const accessToken = await getUserToken(ownerId);
+  const octokit = getOctokit(accessToken);
+  const project = await prisma.project.findFirst({ where: { id: projectId, ownerId } });
   if (!project) throw new ApiError(404, 'Project not found');
 
   const { owner, repo, defaultBranch, baseDir } = await createRepoIfNeeded({ projectId, ownerId });
 
-  // If branch is not provided, fall back to default.
   const targetBranch = branch || defaultBranch;
   await ensureBranchExists({
     octokit,
@@ -137,7 +152,6 @@ const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) =>
     branch: targetBranch
   });
 
-  // Latest commit + base tree for tree creation.
   const branchRef = await octokit.git.getRef({ owner, repo, ref: `heads/${targetBranch}` });
   const latestCommitSha = branchRef.data.object.sha;
   const latestCommit = await octokit.git.getCommit({
@@ -154,13 +168,12 @@ const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) =>
     recursive: true
   });
 
-  const projectFiles = await File.find({ projectId }).sort({ createdAt: 1 });
+  const projectFiles = await prisma.file.findMany({ where: { projectId }, orderBy: { createdAt: 'asc' } });
   const currentPaths = [];
   const treeEntries = [];
 
-  // Add/update all project files in the base directory.
   for (const f of projectFiles) {
-    const content = await getCurrentFileContentFromYjs(f._id);
+    const content = await getCurrentFileContentFromYjs(f.id);
     const path = `${baseDir}/${f.name}`;
     const blob = await octokit.git.createBlob({
       owner,
@@ -178,8 +191,6 @@ const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) =>
     });
   }
 
-  // Optionally delete files that exist under baseDir but no longer exist in the project.
-  // We only operate inside baseDir to avoid deleting unrelated repository files.
   const existingUnderBaseDir = (existingTree.data.tree || [])
     .filter((t) => t.type === 'blob' && typeof t.path === 'string' && t.path.startsWith(`${baseDir}/`))
     .map((t) => t.path);
@@ -225,8 +236,44 @@ const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) =>
   };
 };
 
-module.exports = {
-  createRepoIfNeeded,
-  commitProjectToBranch
+const createPullRequest = async ({ projectId, ownerId, head, base, title, body }) => {
+  const accessToken = await getUserToken(ownerId);
+  const octokit = getOctokit(accessToken);
+  const project = await prisma.project.findFirst({ where: { id: projectId, ownerId } });
+  if (!project || !project.githubRepo) throw new ApiError(400, 'Project repository not linked');
+
+  const { data } = await octokit.pulls.create({
+    owner: project.githubOwner,
+    repo: project.githubRepo,
+    title: title || `Pull Request from DevCollab`,
+    body: body || `This PR was created from the DevCollab IDE.`,
+    head, // branch name
+    base: base || project.githubDefaultBranch || 'main'
+  });
+
+  return data;
 };
 
+const getGithubFileContent = async ({ projectId, ownerId, path }) => {
+  const accessToken = await getUserToken(ownerId);
+  const octokit = getOctokit(accessToken);
+  const project = await prisma.project.findFirst({ where: { id: projectId, ownerId } });
+  if (!project || !project.githubRepo) throw new ApiError(400, 'Project repository not linked');
+
+  const { data } = await octokit.repos.getContent({
+    owner: project.githubOwner,
+    repo: project.githubRepo,
+    path: `${getEnv('GITHUB_BASE_DIR') || 'devcollab'}/${path}`,
+    ref: project.githubDefaultBranch || 'main'
+  });
+
+  if (Array.isArray(data)) throw new ApiError(400, 'Path is a directory');
+  return Buffer.from(data.content, 'base64').toString('utf-8');
+};
+
+module.exports = {
+  createRepoIfNeeded,
+  commitProjectToBranch,
+  createPullRequest,
+  getGithubFileContent
+};

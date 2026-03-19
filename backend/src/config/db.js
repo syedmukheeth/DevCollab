@@ -1,18 +1,18 @@
-const mongoose = require('mongoose');
+const { PrismaClient } = require('@prisma/client');
 
-const connectDB = async (mongoUri) => {
+const prisma = new PrismaClient();
+
+const connectDB = async () => {
   try {
-    await mongoose.connect(mongoUri, {
-      autoIndex: true
-    });
-    // eslint-disable-next-line no-console
-    console.log('MongoDB connected');
+    await prisma.$connect();
+    console.log('PostgreSQL (Prisma) connected');
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.error('MongoDB connection error', err);
+    console.error('Database connection error', err);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
-
+module.exports = {
+  connectDB,
+  prisma
+};
