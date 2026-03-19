@@ -19,7 +19,17 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
 
   // Phase 5 (scaling): use Socket.IO Redis adapter so events broadcast across processes.
   if (redisUrl) {
-    const pubClient = createClient({ url: redisUrl });
+    const url = new URL(redisUrl);
+    const isTls = url.protocol === 'rediss:';
+    const pubClient = createClient({
+      url: redisUrl,
+      socket: isTls
+        ? {
+            tls: true,
+            servername: url.hostname
+          }
+        : undefined
+    });
     const subClient = pubClient.duplicate();
     await pubClient.connect();
     await subClient.connect();
