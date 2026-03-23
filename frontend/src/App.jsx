@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import * as Y from 'yjs';
+import { SocketIOProvider } from 'y-socket.io';
 import { FileExplorer } from './components/FileExplorer.jsx';
 import { CodeEditor } from './components/CodeEditor.jsx';
 import { GitPanel } from './components/GitPanel.jsx';
@@ -7,12 +9,13 @@ import { InterviewTimer } from './components/InterviewTimer.jsx';
 import { PlaybackModal } from './components/PlaybackModal.jsx';
 import { DiffModal } from './components/DiffModal.jsx';
 import { api } from './lib/api.js';
-import * as Y from 'yjs';
-import { SocketIOProvider } from 'y-socket.io';
+import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
 
 const DEFAULT_PROJECT_NAME = 'My DevCollab Project';
 
 export default function App() {
+  const [mode, setMode] = useState('cloud');
+  const [banner, setBanner] = useState('');
   const [project, setProject] = useState(null);
   const [files, setFiles] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
@@ -30,22 +33,44 @@ export default function App() {
   const [globalProvider, setGlobalProvider] = useState(null);
   const [playbackFile, setPlaybackFile] = useState(null);
   const [diffFile, setDiffFile] = useState(null);
-
   const [outputLines, setOutputLines] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
 
-  // Helper for local devcollab user
+  const isLocalMode = mode === 'local';
+  const collaborationEnabled = !isLocalMode;
+
   const getOrCreateLocalUser = () => {
     try {
       const existing = window.localStorage.getItem('devcollab-user');
       if (existing) return JSON.parse(existing);
-    } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
     const id = Math.random().toString(16).slice(2);
     const name = `User-${id.slice(0, 6)}`;
     const color = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
     const next = { name, color };
     window.localStorage.setItem('devcollab-user', JSON.stringify(next));
     return next;
+  };
+
+  const persistLocalWorkspace = (nextProject, nextFiles) => {
+    const workspace = {
+      project: nextProject,
+      files: nextFiles
+    };
+    saveWorkspace(workspace);
+  };
+
+  const bootstrapLocalWorkspace = (message) => {
+    const workspace = loadWorkspace() || createDefaultWorkspace();
+    setMode('local');
+    setBanner(message || 'Running in local workspace mode. Changes are saved in your browser.');
+    setProject(workspace.project);
+    setFiles(workspace.files);
+    setActiveFileId(workspace.files[0]?.id || null);
+    const localUser = getOrCreateLocalUser();
+    setPresenceStates([{ user: localUser, status: 'local', activeFile: workspace.files[0]?.id || null }]);
   };
 
   useEffect(() => {
@@ -63,15 +88,17 @@ export default function App() {
           activeProject = created.data;
         }
 
+        setMode('cloud');
         setProject(activeProject);
 
         const filesRes = await api.get(`/projects/${activeProject.id}/files`);
-        setFiles(filesRes.data);
-        if (filesRes.data.length > 0) setActiveFileId(filesRes.data[0].id);
+        const nextFiles = filesRes.data || [];
+        setFiles(nextFiles);
+        setActiveFileId(nextFiles[0]?.id || null);
+        setBanner('');
 
         await fetchGithubUser();
 
-        // Check if we are in a session
         const urlParams = new URLSearchParams(window.location.search);
         const shareLink = urlParams.get('join');
         if (shareLink) {
@@ -84,8 +111,8 @@ export default function App() {
           }
         }
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error(err);
+        bootstrapLocalWorkspace('Backend unavailable. Switched to local workspace mode; your files will stay in this browser.');
       } finally {
         setIsInitializing(false);
       }
@@ -94,11 +121,15 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!project) return;
+    if (!project || !collaborationEnabled) {
+      setGlobalProvider(null);
+      return undefined;
+    }
+
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
     const room = `project:${project.id}`;
     const token = window.localStorage.getItem('devcollab-token');
-    
+
     const ydoc = new Y.Doc();
     const provider = new SocketIOProvider(socketUrl, room, ydoc, {
       auth: token ? { token } : {}
@@ -120,26 +151,30 @@ export default function App() {
       provider.destroy();
       ydoc.destroy();
     };
-  }, [project]);
+  }, [project, collaborationEnabled]);
 
-  // Update active file in global awareness
   useEffect(() => {
-    if (globalProvider && activeFileId) {
+    if (collaborationEnabled && globalProvider && activeFileId) {
       globalProvider.awareness.setLocalStateField('activeFile', activeFileId);
     }
-  }, [activeFileId, globalProvider]);
 
-  // Execution Event Listeners moved down
+    if (isLocalMode) {
+      const localUser = getOrCreateLocalUser();
+      setPresenceStates([{ user: localUser, status: 'local', activeFile: activeFileId }]);
+    }
+  }, [activeFileId, globalProvider, collaborationEnabled, isLocalMode]);
+
   useEffect(() => {
-    if (!globalProvider) return;
+    if (!globalProvider) return undefined;
     const ioSocket = globalProvider.socket;
-    if (!ioSocket) return;
+    if (!ioSocket) return undefined;
 
     const onOutput = (data) => {
-      setOutputLines(prev => [...prev, data]);
+      setOutputLines((prev) => [...prev, data]);
     };
     const onFinished = () => {
       setIsRunning(false);
+      globalProvider.awareness.setLocalStateField('status', 'idle');
     };
 
     ioSocket.on('execution-output', onOutput);
@@ -151,56 +186,93 @@ export default function App() {
     };
   }, [globalProvider]);
 
-  // Phase 3 (CRDT) uses Yjs + y-socket.io directly. The Phase 2 Socket.IO events
-  // remain on the server, but the UI no longer depends on them for content sync.
-
   const handleRefreshFiles = async () => {
-    if (!project) return;
+    if (!project) return [];
+    if (isLocalMode) {
+      const workspace = loadWorkspace();
+      const nextFiles = workspace.files || [];
+      setFiles(nextFiles);
+      return nextFiles;
+    }
     const res = await api.get(`/projects/${project.id}/files`);
     setFiles(res.data);
+    return res.data;
   };
 
   const handleCreateFile = async (name) => {
     if (!project) return;
-    const res = await api.post(`/projects/${project.id}/files`, {
-      name
-    });
-    await handleRefreshFiles();
-    setActiveFileId(res.data.id);
+    if (isLocalMode) {
+      const newFile = createLocalFile(project.id, name);
+      const nextFiles = [...files, newFile];
+      setFiles(nextFiles);
+      setActiveFileId(newFile.id);
+      persistLocalWorkspace(project, nextFiles);
+      return;
+    }
+    const res = await api.post(`/projects/${project.id}/files`, { name });
+    const refreshed = await handleRefreshFiles();
+    setActiveFileId(res.data.id || refreshed[refreshed.length - 1]?.id || null);
   };
 
   const handleDeleteFile = async (fileId) => {
+    if (isLocalMode) {
+      const remaining = files.filter((f) => f.id !== fileId);
+      setFiles(remaining);
+      setActiveFileId((current) => (current === fileId ? remaining[0]?.id || null : current));
+      persistLocalWorkspace(project, remaining);
+      return;
+    }
+
     await api.delete(`/files/${fileId}`);
-    await handleRefreshFiles();
-    setActiveFileId((current) => {
-      if (current === fileId) {
-        const remaining = files.filter((f) => f.id !== fileId);
-        return remaining.length ? remaining[0].id : null;
-      }
-      return current;
-    });
+    const refreshed = await handleRefreshFiles();
+    setActiveFileId((current) => (current === fileId ? refreshed[0]?.id || null : current));
   };
 
   const handleRenameFile = async (fileId, newName) => {
+    if (isLocalMode) {
+      const nextFiles = files.map((file) => (
+        file.id === fileId
+          ? { ...file, name: newName, updatedAt: new Date().toISOString() }
+          : file
+      ));
+      setFiles(nextFiles);
+      persistLocalWorkspace(project, nextFiles);
+      return;
+    }
     await api.put(`/files/${fileId}`, { name: newName });
     await handleRefreshFiles();
   };
 
-
+  const handleContentChange = async (fileId, content) => {
+    if (isLocalMode) {
+      const nextFiles = files.map((file) => (
+        file.id === fileId
+          ? { ...file, content, updatedAt: new Date().toISOString() }
+          : file
+      ));
+      setFiles(nextFiles);
+      persistLocalWorkspace(project, nextFiles);
+    }
+  };
 
   const fetchGithubUser = async () => {
     try {
       const { data } = await api.get('/github/user');
       setGithubUser(data);
     } catch (e) {
-      // ignore
+      setGithubUser(null);
     }
   };
 
   const handleConnectGitHub = async () => {
+    if (isLocalMode) {
+      setGitStatus('GitHub integration is unavailable in local workspace mode.');
+      return;
+    }
     try {
       const { data } = await api.get('/github/auth');
-      const width = 600, height = 700;
+      const width = 600;
+      const height = 700;
       const left = window.screen.width / 2 - width / 2;
       const top = window.screen.height / 2 - height / 2;
       window.open(data.url, 'GitHub Auth', `width=${width},height=${height},left=${left},top=${top}`);
@@ -222,18 +294,16 @@ export default function App() {
 
   const handleGitInit = async () => {
     if (!project) return;
+    if (isLocalMode) {
+      setGitStatus('Initialize/link repository is disabled in local workspace mode.');
+      return;
+    }
     setLoadingGitInit(true);
     setGitStatus('');
     try {
-      const res = await api.post(
-        `/projects/${project.id}/github/init`,
-        {}
-      );
-      setGitStatus(
-        `Repo ready: ${res.data.owner}/${res.data.repo} (branch: ${res.data.defaultBranch})`
-      );
+      const res = await api.post(`/projects/${project.id}/github/init`, {});
+      setGitStatus(`Repo ready: ${res.data.owner}/${res.data.repo} (branch: ${res.data.defaultBranch})`);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error(err);
       setGitStatus(err?.response?.data?.message || 'GitHub init failed');
     } finally {
@@ -243,18 +313,16 @@ export default function App() {
 
   const handleGitCommit = async () => {
     if (!project) return;
+    if (isLocalMode) {
+      setGitStatus('Commit and push are unavailable without the backend.');
+      return;
+    }
     setLoadingGitCommit(true);
     setGitStatus('');
     try {
-      const res = await api.post(
-        `/projects/${project.id}/github/commit`,
-        { branch: gitBranch, message: gitMessage }
-      );
-      setGitStatus(
-        `Committed ${res.data.commitSha.slice(0, 7)} to ${res.data.branch}`
-      );
+      const res = await api.post(`/projects/${project.id}/github/commit`, { branch: gitBranch, message: gitMessage });
+      setGitStatus(`Committed ${res.data.commitSha.slice(0, 7)} to ${res.data.branch}`);
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error(err);
       setGitStatus(err?.response?.data?.message || 'Commit failed');
     } finally {
@@ -264,13 +332,17 @@ export default function App() {
 
   const handleGitPR = async () => {
     if (!project) return;
+    if (isLocalMode) {
+      setGitStatus('Pull request creation is unavailable in local workspace mode.');
+      return;
+    }
     setLoadingGitPR(true);
     setGitStatus('');
     try {
       const res = await api.post(`/projects/${project.id}/github/create-pr`, {
         head: gitBranch,
         title: `PR from DevCollab: ${gitMessage}`,
-        body: `Automated PR created from DevCollab IDE.`
+        body: 'Automated PR created from DevCollab IDE.'
       });
       setGitStatus(`Created PR #${res.data.number}: ${res.data.html_url}`);
       window.open(res.data.html_url, '_blank');
@@ -282,19 +354,27 @@ export default function App() {
     }
   };
 
-  const activeFile = files.find((f) => f.id === activeFileId) || null;
+  const activeFile = useMemo(
+    () => files.find((f) => f.id === activeFileId) || null,
+    [files, activeFileId]
+  );
 
   const handleRunCode = () => {
+    if (isLocalMode) {
+      setOutputLines([{ type: 'system', payload: 'Code execution requires the backend runner. Local mode supports editing and file management only.' }]);
+      setIsRunning(false);
+      return;
+    }
+
     if (!globalProvider || !globalProvider.socket || !activeFile) {
       if (!activeFile) setOutputLines([{ type: 'error', payload: 'No active file selected.' }]);
       return;
     }
-    
-    // Determine language by extension
+
     const ext = activeFile.name.split('.').pop().toLowerCase();
     const langMap = { py: 'python', js: 'javascript', ts: 'typescript', go: 'go', java: 'java' };
     const language = langMap[ext];
-    
+
     if (!language) {
       setOutputLines([{ type: 'error', payload: `Unsupported file extension for execution: .${ext}` }]);
       return;
@@ -302,12 +382,31 @@ export default function App() {
 
     setOutputLines([]);
     setIsRunning(true);
+    globalProvider.awareness.setLocalStateField('status', 'executing');
 
-    globalProvider.socket.emit('execute-code', { 
+    globalProvider.socket.emit('execute-code', {
       code: window.getEditorCode ? window.getEditorCode() : (activeFile.content || ''),
-      language, 
-      fileId: activeFileId 
+      language,
+      fileId: activeFileId
     });
+  };
+
+  const handleOpenHistory = () => {
+    if (!activeFile) return;
+    if (isLocalMode) {
+      setGitStatus('Change history replay requires the backend event log.');
+      return;
+    }
+    setPlaybackFile(activeFile);
+  };
+
+  const handleOpenDiff = () => {
+    if (!activeFile) return;
+    if (isLocalMode) {
+      setGitStatus('Git diff is unavailable in local workspace mode.');
+      return;
+    }
+    setDiffFile(activeFile);
   };
 
   return (
@@ -317,26 +416,28 @@ export default function App() {
           <div className="app-title">DevCollab</div>
           <div className="app-subtitle">
             {project ? project.name : 'Initializing project...'}
+            {isLocalMode ? ' • Local mode' : ' • Cloud mode'}
           </div>
         </div>
         <div className="app-header-right">
           {sessionData?.interviewMode && (
             <InterviewTimer expiresAt={sessionData.expiresAt} onExpire={() => alert('Interview time ended!')} />
           )}
-          {sessionData?.createdBy === window.localStorage.getItem('devcollab-user-id-placeholder') && (
-             /* Actually I should check if requester is creator */
-             sessionUser?.role === 'INTERVIEWER' && (
-               <button onClick={async () => {
-                 await api.post(`/sessions/${sessionData.id}/end`);
-                 window.location.reload();
-               }} style={{marginLeft: '1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '0.2rem 0.6rem', fontSize: '0.75rem', cursor: 'pointer'}}>
-                 End Interview
-               </button>
-             )
+          {sessionData && sessionData.createdBy && sessionData.createdBy === sessionUser?.userId && sessionUser?.role === 'INTERVIEWER' && (
+            <button
+              onClick={async () => {
+                await api.post(`/sessions/${sessionData.id}/end`);
+                window.location.reload();
+              }}
+              style={{ marginLeft: '1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '0.2rem 0.6rem', fontSize: '0.75rem', cursor: 'pointer' }}
+            >
+              End Interview
+            </button>
           )}
           <PresenceBar users={presenceStates} />
         </div>
       </header>
+      {banner ? <div className="mode-banner">{banner}</div> : null}
       <div className="app-body">
         <aside className="sidebar">
           <FileExplorer
@@ -352,30 +453,30 @@ export default function App() {
         </aside>
         <main className="editor-container">
           <div className="git-panel-wrapper">
-              <GitPanel
-                disabled={!project}
-                branch={gitBranch}
-                setBranch={setGitBranch}
-                message={gitMessage}
-                setMessage={setGitMessage}
-                status={gitStatus}
-                onInit={handleGitInit}
-                onCommit={handleGitCommit}
-                loadingInit={loadingGitInit}
-                loadingCommit={loadingGitCommit}
-                loadingPR={loadingGitPR}
-                onPR={handleGitPR}
-                githubUser={githubUser}
-                onConnect={handleConnectGitHub}
-              />
+            <GitPanel
+              disabled={!project}
+              branch={gitBranch}
+              setBranch={setGitBranch}
+              message={gitMessage}
+              setMessage={setGitMessage}
+              status={gitStatus}
+              onInit={handleGitInit}
+              onCommit={handleGitCommit}
+              loadingInit={loadingGitInit}
+              loadingCommit={loadingGitCommit}
+              loadingPR={loadingGitPR}
+              onPR={handleGitPR}
+              githubUser={githubUser}
+              onConnect={handleConnectGitHub}
+            />
           </div>
           {activeFile ? (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.4rem 0.8rem', backgroundColor: '#020617', borderBottom: '1px solid #1f2937', gap: '0.5rem' }}>
-                <button onClick={() => setDiffFile(activeFile)} style={{ cursor: 'pointer', padding: '0.3rem 0.8rem', background: '#374151', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem' }}>
+                <button onClick={handleOpenDiff} style={{ cursor: 'pointer', padding: '0.3rem 0.8rem', background: '#374151', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem' }}>
                   Diff 📂
                 </button>
-                <button onClick={() => setPlaybackFile(activeFile)} style={{ cursor: 'pointer', padding: '0.3rem 0.8rem', background: '#374151', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem' }}>
+                <button onClick={handleOpenHistory} style={{ cursor: 'pointer', padding: '0.3rem 0.8rem', background: '#374151', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem' }}>
                   History 🕒
                 </button>
                 <button onClick={handleRunCode} disabled={isRunning} style={{ cursor: isRunning ? 'not-allowed' : 'pointer', padding: '0.3rem 1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>
@@ -387,15 +488,17 @@ export default function App() {
                   key={activeFile.id}
                   file={activeFile}
                   readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
+                  collaborationEnabled={collaborationEnabled}
+                  onChange={(content) => handleContentChange(activeFile.id, content)}
                 />
               </div>
               <div style={{ height: '35%', backgroundColor: '#020617', borderTop: '1px solid #1f2937', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #1f2937' }}>Terminal</div>
                 <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.8rem', fontFamily: 'monospace', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
-                  {outputLines.length === 0 && <span style={{color: '#4b5563'}}>Output will appear here...</span>}
-                  {outputLines.map((l, i) => (
-                    <span key={i} style={{ color: l.type === 'error' || l.type === 'stderr' ? '#ef4444' : (l.type === 'system' ? '#60a5fa' : '#d1d5db') }}>
-                      {l.payload}
+                  {outputLines.length === 0 && <span style={{ color: '#4b5563' }}>Output will appear here...</span>}
+                  {outputLines.map((line, index) => (
+                    <span key={`${line.type}-${index}`} style={{ color: line.type === 'error' || line.type === 'stderr' ? '#ef4444' : (line.type === 'system' ? '#60a5fa' : '#d1d5db') }}>
+                      {line.payload}
                     </span>
                   ))}
                 </div>
@@ -427,4 +530,3 @@ export default function App() {
     </div>
   );
 }
-
