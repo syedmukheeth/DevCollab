@@ -1,19 +1,40 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { SocketIOProvider } from 'y-socket.io';
 import { MonacoBinding } from 'y-monaco';
 
+const LANGUAGE_BY_EXTENSION = {
+  js: 'javascript',
+  jsx: 'javascript',
+  ts: 'typescript',
+  tsx: 'typescript',
+  py: 'python',
+  json: 'json',
+  md: 'markdown',
+  css: 'css',
+  html: 'html',
+  go: 'go',
+  java: 'java'
+};
+
+const getLanguageFromFileName = (name = '') => {
+  const ext = name.split('.').pop()?.toLowerCase();
+  return LANGUAGE_BY_EXTENSION[ext] || 'plaintext';
+};
+
 export function CodeEditor({
   file,
-  readOnly
+  readOnly,
+  collaborationEnabled,
+  onChange
 }) {
   const editorRef = useRef(null);
-  const monacoRef = useRef(null);
-
   const ydocRef = useRef(null);
   const providerRef = useRef(null);
   const bindingRef = useRef(null);
+
+  const language = useMemo(() => getLanguageFromFileName(file.name), [file.name]);
 
   useEffect(() => {
     return () => {
@@ -25,6 +46,15 @@ export function CodeEditor({
       ydocRef.current = null;
     };
   }, []);
+
+  const resetCollaboration = () => {
+    bindingRef.current?.destroy?.();
+    providerRef.current?.destroy?.();
+    ydocRef.current?.destroy?.();
+    bindingRef.current = null;
+    providerRef.current = null;
+    ydocRef.current = null;
+  };
 
   const getOrCreateLocalUser = () => {
     try {
@@ -51,15 +81,30 @@ export function CodeEditor({
     <div className="code-editor-root">
       <div className="editor-header">
         <span className="editor-filename">{file.name}</span>
-        <span className="editor-meta">CRDT</span>
+        <span className="editor-meta">{collaborationEnabled ? 'CRDT' : 'LOCAL'}</span>
       </div>
       <Editor
+        key={`${file.id}-${collaborationEnabled ? 'collab' : 'local'}`}
         height="100%"
-        defaultLanguage="javascript"
+        defaultLanguage={language}
+        language={language}
         theme="vs-dark"
-        onMount={(editor, monaco) => {
+        value={file.content || ''}
+        onChange={(value) => {
+          const nextValue = value ?? '';
+          window.getEditorCode = () => nextValue;
+          if (!collaborationEnabled) {
+            onChange?.(nextValue);
+          }
+        }}
+        onMount={(editor) => {
           editorRef.current = editor;
-          monacoRef.current = monaco;
+          window.getEditorCode = () => editor.getValue();
+
+          if (!collaborationEnabled) {
+            resetCollaboration();
+            return;
+          }
 
           const ydoc = new Y.Doc();
           ydocRef.current = ydoc;
@@ -72,7 +117,6 @@ export function CodeEditor({
           });
           providerRef.current = provider;
 
-          // Presence: MonacoBinding uses Yjs Awareness metadata.
           const localUser = getOrCreateLocalUser();
           provider.awareness.setLocalStateField('user', localUser);
 
@@ -95,8 +139,6 @@ export function CodeEditor({
           editor.onDidScrollChange((e) => {
             provider.awareness.setLocalStateField('scroll', e.scrollTop);
           });
-          
-          window.getEditorCode = () => editor.getValue();
         }}
         options={{
           readOnly,
@@ -109,4 +151,3 @@ export function CodeEditor({
     </div>
   );
 }
-
