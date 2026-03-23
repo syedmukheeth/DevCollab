@@ -462,3 +462,12 @@ body {
   margin-bottom: 1rem;
 }
 
+
+
+.mode-banner {
+  padding: 0.65rem 1rem;
+  background: #172554;
+  color: #bfdbfe;
+  border-bottom: 1px solid #1d4ed8;
+  font-size: 0.85rem;
+}
