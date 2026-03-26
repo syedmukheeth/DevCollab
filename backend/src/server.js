@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const { parseEnv } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { requestLogger } = require('./middleware/requestLogger');
 const projectRoutes = require('./routes/projectRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const { createCollabServer } = require('./realtime/collabServer');
@@ -26,7 +27,8 @@ app.use(
   })
 );
 app.use(helmet());
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(requestLogger);
 app.use(morgan('dev'));
 app.use(
   rateLimit({
@@ -104,9 +106,19 @@ const start = async () => {
   process.on('SIGTERM', shutdown);
 };
 
+// ── Graceful Process Error Handling ──
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err.message);
+  console.error(err.stack);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
+});
+
 start().catch((err) => {
   // eslint-disable-next-line no-console
   console.error(err);
   process.exit(1);
 });
-
