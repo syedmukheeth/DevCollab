@@ -10,23 +10,27 @@
 
 ## ✨ Key Features
 
-- 🤝 **Real-time Collaboration**: Conflict-free multi-user editing powered by **Yjs** and **Socket.io**.
-- 🛠️ **Integrated IDE**: Pro-grade editor using **Monaco Editor** (VS Code engine) with intelligent syntax highlighting.
-- ⚡ **Secure Execution**: Run code in isolated **Docker/gVisor** sandboxes (supports Python, Node.js, Go, Java).
+- 🤝 **Real-time Collaboration**: Conflict-free multi-user editing powered by **Yjs CRDTs** with cursor presence broadcasting.
+- 🛠️ **Integrated IDE**: Pro-grade editor using **Monaco Editor** (VS Code engine) with bracket pair colorization, smooth animations, and configurable settings.
+- ⚡ **Secure Execution**: Run code in isolated **Docker** sandboxes with concurrency-controlled execution queue (supports **Python, JS, TS, Go, Java, C++, Rust, Ruby**).
 - 🔗 **GitHub Native**: Sync projects, commit changes, and create Pull Requests directly from the workspace.
 - 🕒 **Time-Travel Debugging**: Built-in state snapshots for playback and visual diffing of file history.
-- 👥 **Interview Workflows**: Dedicated mode with synchronized timers and controlled participant roles.
+- 👥 **Interview Workflows**: Dedicated mode with synchronized timers and controlled participant roles (RBAC).
+- 🛡️ **Production Infrastructure**: Circuit breakers, Zod request validation, structured logging with correlation IDs.
+- ⌨️ **Keyboard Shortcuts**: Full shortcut system (Ctrl+Enter to run, Ctrl+B toggle sidebar, Ctrl+Shift+T theme toggle).
+- ⚙️ **Settings Panel**: Configurable font size, tab size, word wrap, minimap, and font family.
 
 ---
 
 ## 🏗️ Technical Architecture
 
 ### Core Stack
-- **Frontend**: React (Vite) + Tailwind-inspired Glassmorphism + Monaco Editor.
-- **Backend**: Node.js (Express) + Socket.io + **Winston** (Structured Logging).
-- **Database**: PostgreSQL with **Prisma ORM** for relational integrity.
-- **State Management**: **Yjs** (CRDTs) with Redis persistence for seamless real-time syncing.
-- **Sandboxing**: Isolated Docker containers with resource limits (CPU/RAM) and network isolation.
+- **Frontend**: React (Vite) + Morphic Glassmorphism CSS + Monaco Editor.
+- **Backend**: Node.js (Express) + Socket.io + **Winston** (Structured Logging) + Circuit Breakers.
+- **Database**: SQLite (local) / PostgreSQL (production) with **Prisma ORM**.
+- **State Management**: **Yjs** (CRDTs) with Redis persistence + in-memory fallback.
+- **Sandboxing**: Isolated Docker containers with resource limits (CPU/RAM), network isolation, and execution queue.
+- **Security**: RBAC middleware, Zod request validation, HMAC token auth with timing-safe comparison.
 
 ### High-Level System Design
 
@@ -144,12 +148,24 @@ docker compose up --build -d
 ## 🛠️ Development & Testing
 
 ### Running Tests
-DevCollab maintains high code quality with automated test suites:
+DevCollab maintains high code quality with **77 automated tests** across 10 suites:
 ```bash
 cd backend
 npm test
 ```
-*Tests cover CRDT merge correctness, API endpoints, and sandbox isolation.*
+
+| Suite | Tests | Coverage |
+|-------|-------|----------|
+| Auth Token | 11 | Token issuance, verification, expiration, tampering |
+| Auth Middleware | 4 | Valid/invalid/missing/expired tokens |
+| API Error | 5 | Error construction, stack traces |
+| Env Validation | 7 | Required fields, defaults, multi-origin CORS |
+| Execution Service | 8 | Runtime config, unsupported language handling |
+| Circuit Breaker | 8 | State transitions, recovery, stats tracking |
+| Language Detector | 27 | Extension, shebang, content heuristics |
+| CRDT Merge | 2 | Concurrent editing, deletion handling |
+| API Endpoints | 2 | Health and readiness checks |
+| Sandbox Isolation | 1 | Env variable leak prevention |
 
 ---
 
