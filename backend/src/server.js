@@ -17,6 +17,7 @@ const authRoutes = require('./routes/authRoutes');
 const { verifyAuthToken } = require('./utils/authToken');
 const metricsRoutes = require('./routes/metricsRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
+const { setupLspServer } = require('./services/lspManager');
 
 const env = parseEnv();
 
@@ -108,6 +109,7 @@ const start = async () => {
   dbReady = true;
 
   const httpServer = http.createServer(app);
+  setupLspServer(httpServer);
 
   try {
     const { redisConnected } = await createCollabServer({
