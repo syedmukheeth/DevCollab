@@ -27,7 +27,8 @@ export function CodeEditor({
   file,
   readOnly,
   collaborationEnabled,
-  onChange
+  onChange,
+  editorSettings = {}
 }) {
   const editorRef = useRef(null);
   const ydocRef = useRef(null);
@@ -139,13 +140,38 @@ export function CodeEditor({
           editor.onDidScrollChange((e) => {
             provider.awareness.setLocalStateField('scroll', e.scrollTop);
           });
+
+          // Broadcast cursor position for remote presence
+          editor.onDidChangeCursorPosition((e) => {
+            provider.awareness.setLocalStateField('cursor', {
+              lineNumber: e.position.lineNumber,
+              column: e.position.column
+            });
+          });
+
+          editor.onDidChangeCursorSelection((e) => {
+            provider.awareness.setLocalStateField('selection', {
+              startLineNumber: e.selection.startLineNumber,
+              startColumn: e.selection.startColumn,
+              endLineNumber: e.selection.endLineNumber,
+              endColumn: e.selection.endColumn
+            });
+          });
         }}
         options={{
           readOnly,
-          fontSize: 14,
-          minimap: { enabled: false },
+          fontSize: editorSettings.fontSize || 14,
+          fontFamily: editorSettings.fontFamily || 'JetBrains Mono, monospace',
+          tabSize: editorSettings.tabSize || 2,
+          wordWrap: editorSettings.wordWrap || 'on',
+          minimap: { enabled: editorSettings.minimap || false },
           automaticLayout: true,
-          scrollBeyondLastLine: false
+          scrollBeyondLastLine: false,
+          smoothScrolling: true,
+          cursorBlinking: 'smooth',
+          cursorSmoothCaretAnimation: 'on',
+          bracketPairColorization: { enabled: true },
+          guides: { bracketPairs: true }
         }}
       />
     </div>

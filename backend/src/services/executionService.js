@@ -32,6 +32,21 @@ const RUNTIMES = {
     image: 'openjdk:21-slim',
     ext: '.java',
     cmd: (file) => ['java', file]
+  },
+  cpp: {
+    image: 'gcc:13-bookworm',
+    ext: '.cpp',
+    cmd: (file) => ['sh', '-c', `g++ -o /tmp/out ${file} && /tmp/out`]
+  },
+  rust: {
+    image: 'rust:1.75-slim',
+    ext: '.rs',
+    cmd: (file) => ['sh', '-c', `rustc -o /tmp/out ${file} && /tmp/out`]
+  },
+  ruby: {
+    image: 'ruby:3.2-slim',
+    ext: '.rb',
+    cmd: (file) => ['ruby', file]
   }
 };
 

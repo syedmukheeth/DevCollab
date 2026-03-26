@@ -34,8 +34,8 @@ describe('executionService', () => {
       expect(RUNTIMES.java.ext).toBe('.java');
     });
 
-    it('should have exactly 5 supported runtimes', () => {
-      expect(Object.keys(RUNTIMES)).toHaveLength(5);
+    it('should have exactly 8 supported runtimes', () => {
+      expect(Object.keys(RUNTIMES)).toHaveLength(8);
     });
 
     it('all runtimes should have image, ext, and cmd', () => {
