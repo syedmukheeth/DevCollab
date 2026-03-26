@@ -12,6 +12,7 @@ import { SettingsModal, ShortcutsOverlay } from './components/SettingsModal.jsx'
 import { LandingPage } from './components/LandingPage.jsx';
 import { SessionPanel } from './components/SessionPanel.jsx';
 import { MetricsPanel } from './components/MetricsPanel.jsx';
+import { TerminalPanel } from './components/TerminalPanel.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
@@ -622,21 +623,26 @@ export default function App() {
               </div>
             )}
             
-            <div className="monaco-editor-wrapper" style={{ flex: 1, borderRadius: openedFileIds.length > 0 ? '0 0 12px 12px' : '12px' }}>
+            <div className="monaco-editor-wrapper" style={{ flex: 1, borderRadius: openedFileIds.length > 0 ? '0 0 12px 12px' : '12px', display: 'flex', flexDirection: 'column' }}>
               {activeFile ? (
-                <CodeEditor
-                  key={`${activeFile.id}-${theme}`}
-                  file={activeFile}
-                  theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
-                  readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
-                  collaborationEnabled={collaborationEnabled}
-                  onChange={(content) => {
-                    const nextFiles = files.map(f => f.id === activeFile.id ? { ...f, content } : f);
-                    setFiles(nextFiles);
-                    if (isLocalMode) persistLocalWorkspace(project, nextFiles);
-                  }}
-                  editorSettings={editorSettings}
-                />
+                <>
+                  <div style={{ padding: '6px 16px', fontSize: '0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-panel)' }}>
+                    <span>{project?.name || 'Project'}</span> <span style={{ opacity: 0.4 }}>/</span> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{activeFile.name}</span>
+                  </div>
+                  <CodeEditor
+                    key={`${activeFile.id}-${theme}`}
+                    file={activeFile}
+                    theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
+                    readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
+                    collaborationEnabled={collaborationEnabled}
+                    onChange={(content) => {
+                      const nextFiles = files.map(f => f.id === activeFile.id ? { ...f, content } : f);
+                      setFiles(nextFiles);
+                      if (isLocalMode) persistLocalWorkspace(project, nextFiles);
+                    }}
+                    editorSettings={editorSettings}
+                  />
+                </>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                   No file open. Select a file from the explorer.
@@ -657,13 +663,8 @@ export default function App() {
               </div>
               <div style={{ flex: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', background: 'var(--bg-panel)', borderRadius: '12px', overflow: 'hidden' }}>
                 <div style={{ padding: '0.3rem 0.8rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Terminal</div>
-                <div className="terminal-wrapper" style={{ flex: 1, margin: 0, borderRadius: 0, border: 'none', borderTop: '1px solid var(--border-glass)' }}>
-                  {outputLines.length === 0 && <span style={{ color: 'var(--text-muted)' }}>Output will appear here...</span>}
-                  {outputLines.map((line, index) => (
-                    <div key={`${line.type}-${index}`} style={{ color: line.type === 'error' || line.type === 'stderr' ? '#ef4444' : (line.type === 'system' ? 'var(--accent)' : 'var(--text-main)') }}>
-                      {line.payload}
-                    </div>
-                  ))}
+                <div className="terminal-wrapper" style={{ flex: 1, margin: 0, padding: 0, borderRadius: 0, border: 'none', borderTop: '1px solid var(--border-glass)', background: '#1e1e1e' }}>
+                  <TerminalPanel lines={outputLines} />
                 </div>
               </div>
             </div>
