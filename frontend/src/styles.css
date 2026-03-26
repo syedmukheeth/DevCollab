@@ -259,3 +259,40 @@ body {
   font-weight: 500;
   text-align: center;
 }
+
+/* ── Remote Cursor Decorations (Yjs Awareness) ── */
+.yRemoteSelection {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+.yRemoteSelectionHead {
+  position: absolute;
+  border-left: 2px solid;
+  border-color: var(--accent);
+  height: 100%;
+}
+
+.yRemoteSelectionHead::after {
+  content: attr(data-username);
+  position: absolute;
+  top: -1.4em;
+  left: -2px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: white;
+  background: var(--accent);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+/* ── Modal Overlay ── */
+.playback-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+}
