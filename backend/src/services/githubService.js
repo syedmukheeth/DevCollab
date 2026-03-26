@@ -2,6 +2,7 @@ const { Octokit } = require('@octokit/rest');
 const Y = require('yjs');
 const { prisma } = require('../config/db');
 const ApiError = require('../utils/ApiError');
+const logger = require('../utils/logger');
 
 const getEnv = (name) => {
   const v = process.env[name];
@@ -21,6 +22,11 @@ const getOctokit = (accessToken) => {
 };
 
 // Internal helper to get user's token
+/**
+ * Retrieves the GitHub access token for a specific user from the database.
+ * @param {string} userId - The unique identifier of the user.
+ * @returns {Promise<string|null>} The access token or null if not found.
+ */
 const getUserToken = async (userId) => {
   const github = await prisma.userGitHub.findUnique({ where: { userId } });
   return github?.accessToken || null;
@@ -49,6 +55,13 @@ const getOrResolveOwner = async (octokit, project) => {
   return authUser.data.login;
 };
 
+/**
+ * Creates a new GitHub repository for a project if it doesn't already exist.
+ * @param {Object} params
+ * @param {string} params.projectId - The ID of the project.
+ * @param {string} params.ownerId - The ID of the user owning the project.
+ * @returns {Promise<Object>} Repository details (owner, repo, branch, baseDir).
+ */
 const createRepoIfNeeded = async ({ projectId, ownerId }) => {
   const accessToken = await getUserToken(ownerId);
   const octokit = getOctokit(accessToken);
