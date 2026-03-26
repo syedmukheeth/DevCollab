@@ -85,8 +85,12 @@ const runCode = async ({ code, language, onData, onDone, timeoutMs = 10000 }) =>
         Binds: [`${tempDir}:/app:ro`],
         Memory: 256 * 1024 * 1024, // 256MB RAM limit
         MemorySwap: 256 * 1024 * 1024,
-        NanoCpus: 1000000000, // 1 CPU limit
-        NetworkMode: 'none' // true sandbox: no internet access inside
+        NanoCpus: 1000000000,      // 1 CPU limit
+        NetworkMode: 'none',       // true sandbox: no internet access inside
+        PidsLimit: 50,             // prevent fork bombs
+        ReadonlyRootfs: true,      // immutable file system
+        CapDrop: ['ALL'],          // drop all linux capabilities
+        SecurityOpt: ['no-new-privileges'] 
       },
       WorkingDir: '/app'
     });

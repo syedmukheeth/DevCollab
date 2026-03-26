@@ -14,6 +14,8 @@ const fileRoutes = require('./routes/fileRoutes');
 const { createCollabServer } = require('./realtime/collabServer');
 const githubRoutes = require('./routes/githubRoutes');
 const authRoutes = require('./routes/authRoutes');
+const { verifyAuthToken } = require('./utils/authToken');
+
 const sessionRoutes = require('./routes/sessionRoutes');
 
 const env = parseEnv();
@@ -26,16 +28,46 @@ app.use(
     credentials: false
   })
 );
-app.use(helmet());
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      "script-src": ["'self'"],
+      "object-src": ["'none'"],
+      "upgrade-insecure-requests": [],
+    },
+  })
+);
 app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 app.use(morgan('dev'));
+
+// Extract userId from auth header for rate limiting without enforcing it
+app.use((req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.split(' ')[1];
+    try {
+      const decoded = verifyAuthToken(token, process.env.SESSION_SECRET);
+      if (decoded && decoded.userId) {
+        req.userId = decoded.userId;
+      }
+    } catch (e) { /* ignore invalid tokens for rate limiting */ }
+  }
+  next();
+});
+
+// Per-user rate limiting
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
-    limit: 600,
+    max: 600, // max 600 requests per minute per IP/User
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    keyGenerator: (req) => {
+      return req.userId || req.ip;
+    },
+    message: { message: "Too many requests, please try again later." }
   })
 );
 
