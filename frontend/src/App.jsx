@@ -664,7 +664,7 @@ export default function App() {
               <div style={{ flex: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', background: 'var(--bg-panel)', borderRadius: '12px', overflow: 'hidden' }}>
                 <div style={{ padding: '0.3rem 0.8rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Terminal</div>
                 <div className="terminal-wrapper" style={{ flex: 1, margin: 0, padding: 0, borderRadius: 0, border: 'none', borderTop: '1px solid var(--border-glass)', background: '#1e1e1e' }}>
-                  <TerminalPanel lines={outputLines} />
+                  <TerminalPanel socket={globalProvider?.socket} sessionId={sessionData?.id || project?.id} />
                 </div>
               </div>
             </div>
