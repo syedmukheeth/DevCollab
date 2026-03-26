@@ -354,6 +354,18 @@ export default function App() {
     }
   };
 
+  const [theme, setTheme] = useState(() => window.localStorage.getItem('devcollab-theme') || 'dark');
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    window.localStorage.setItem('devcollab-theme', next);
+  };
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [theme]);
+
   const activeFile = useMemo(
     () => files.find((f) => f.id === activeFileId) || null,
     [files, activeFileId]
@@ -413,13 +425,18 @@ export default function App() {
     <div className="app-root">
       <header className="app-header">
         <div className="app-header-left">
-          <div className="app-title">DevCollab</div>
+          <div className="app-title">
+             <span style={{ fontSize: '1.5rem' }}>💠</span> DevCollab
+          </div>
           <div className="app-subtitle">
             {project ? project.name : 'Initializing project...'}
             {isLocalMode ? ' • Local mode' : ' • Cloud mode'}
           </div>
         </div>
-        <div className="app-header-right">
+        <div className="app-header-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           {sessionData?.interviewMode && (
             <InterviewTimer expiresAt={sessionData.expiresAt} onExpire={() => alert('Interview time ended!')} />
           )}
@@ -429,7 +446,8 @@ export default function App() {
                 await api.post(`/sessions/${sessionData.id}/end`);
                 window.location.reload();
               }}
-              style={{ marginLeft: '1rem', background: '#ef4444', color: 'white', border: 'none', borderRadius: '4px', padding: '0.2rem 0.6rem', fontSize: '0.75rem', cursor: 'pointer' }}
+              className="morphic-button"
+              style={{ background: '#ef4444', color: 'white' }}
             >
               End Interview
             </button>
@@ -437,9 +455,9 @@ export default function App() {
           <PresenceBar users={presenceStates} />
         </div>
       </header>
-      {banner ? <div className="mode-banner">{banner}</div> : null}
+      {banner ? <div className="banner-glass">{banner}</div> : null}
       <div className="app-body">
-        <aside className="sidebar">
+        <aside className="sidebar glass-panel">
           <FileExplorer
             files={files}
             activeFileId={activeFileId}
@@ -451,8 +469,8 @@ export default function App() {
             presenceStates={presenceStates}
           />
         </aside>
-        <main className="editor-container">
-          <div className="git-panel-wrapper">
+        <main className="editor-main-container">
+          <div className="git-panel-wrapper glass-panel" style={{ padding: '0.5rem' }}>
             <GitPanel
               disabled={!project}
               branch={gitBranch}
@@ -471,41 +489,42 @@ export default function App() {
             />
           </div>
           {activeFile ? (
-            <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.4rem 0.8rem', backgroundColor: '#020617', borderBottom: '1px solid #1f2937', gap: '0.5rem' }}>
-                <button onClick={handleOpenDiff} style={{ cursor: 'pointer', padding: '0.3rem 0.8rem', background: '#374151', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem' }}>
+            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.4rem 0.8rem', gap: '0.5rem' }}>
+                <button onClick={handleOpenDiff} className="morphic-button">
                   Diff 📂
                 </button>
-                <button onClick={handleOpenHistory} style={{ cursor: 'pointer', padding: '0.3rem 0.8rem', background: '#374151', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem' }}>
+                <button onClick={handleOpenHistory} className="morphic-button">
                   History 🕒
                 </button>
-                <button onClick={handleRunCode} disabled={isRunning} style={{ cursor: isRunning ? 'not-allowed' : 'pointer', padding: '0.3rem 1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                <button onClick={handleRunCode} disabled={isRunning} className="morphic-button primary">
                   {isRunning ? 'Running...' : 'Run ▶'}
                 </button>
               </div>
-              <div style={{ flex: 1, minHeight: 0 }}>
+              <div className="monaco-editor-wrapper" style={{ flex: 1, minHeight: 0, marginTop: '0.5rem' }}>
                 <CodeEditor
-                  key={activeFile.id}
-                  file={activeFile}
-                  readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
-                  collaborationEnabled={collaborationEnabled}
-                  onChange={(content) => handleContentChange(activeFile.id, content)}
+                    key={`${activeFile.id}-${theme}`}
+                    file={activeFile}
+                    theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
+                    readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
+                    collaborationEnabled={collaborationEnabled}
+                    onChange={(content) => handleContentChange(activeFile.id, content)}
                 />
               </div>
-              <div style={{ height: '35%', backgroundColor: '#020617', borderTop: '1px solid #1f2937', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '0.3rem 0.8rem', fontSize: '0.75rem', color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #1f2937' }}>Terminal</div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem 0.8rem', fontFamily: 'monospace', fontSize: '0.85rem', whiteSpace: 'pre-wrap' }}>
-                  {outputLines.length === 0 && <span style={{ color: '#4b5563' }}>Output will appear here...</span>}
+              <div style={{ height: '30%', marginTop: '1rem', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '0.3rem 0.8rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Terminal</div>
+                <div className="terminal-wrapper">
+                  {outputLines.length === 0 && <span style={{ color: 'var(--text-muted)' }}>Output will appear here...</span>}
                   {outputLines.map((line, index) => (
-                    <span key={`${line.type}-${index}`} style={{ color: line.type === 'error' || line.type === 'stderr' ? '#ef4444' : (line.type === 'system' ? '#60a5fa' : '#d1d5db') }}>
+                    <div key={`${line.type}-${index}`} style={{ color: line.type === 'error' || line.type === 'stderr' ? '#ef4444' : (line.type === 'system' ? 'var(--accent)' : 'var(--text-main)') }}>
                       {line.payload}
-                    </span>
+                    </div>
                   ))}
                 </div>
               </div>
             </div>
           ) : (
-            <div className="empty-state">
+            <div className="glass-panel" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
               {isInitializing
                 ? 'Setting up your workspace...'
                 : 'Create a file to start coding.'}

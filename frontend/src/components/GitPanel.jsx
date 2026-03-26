@@ -19,73 +19,77 @@ export function GitPanel({
   const isConnected = !!githubUser?.accessToken;
 
   return (
-    <div className="git-panel">
-      <div className="git-panel-title">
-        GitHub 
-        {isConnected && <span className="github-user-badge">@{githubUser.username}</span>}
+    <div className="git-panel" style={{ background: 'none', border: 'none', padding: '0.5rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.8rem' }}>
+        <div style={{ fontWeight: 800, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+           <span style={{ opacity: 0.8 }}>🐙</span> GitHub 
+        </div>
+        {isConnected && (
+            <div style={{ fontSize: '0.75rem', background: 'var(--accent)', color: 'white', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+              @{githubUser.username}
+            </div>
+        )}
       </div>
       
       {!isConnected ? (
-        <div className="github-connect-prompt">
-          <p>Connect your GitHub account to commit and push changes directly from DevCollab.</p>
-          <button className="git-btn primary" onClick={onConnect}>Connect GitHub</button>
+        <div style={{ textAlign: 'center', padding: '0.5rem' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.8rem' }}>Connect GitHub to persist your code.</p>
+          <button className="morphic-button primary" style={{ width: '100%', justifyContent: 'center' }} onClick={onConnect}>Connect Account</button>
         </div>
       ) : (
         <>
-          <div className="git-grid">
-            <div className="git-field">
-              <label className="git-label">Branch</label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '0.5rem', marginBottom: '0.8rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>Branch</label>
               <input
                 className="git-input"
+                style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', background: 'var(--bg-main)', border: '1px solid var(--border-glass)', borderRadius: '6px', color: 'var(--text-main)' }}
                 value={branch}
                 onChange={(e) => setBranch(e.target.value)}
                 disabled={disabled}
-                placeholder="branch-name"
+                placeholder="main"
               />
             </div>
-            <div className="git-field">
-              <label className="git-label">Commit message</label>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.65rem', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: 700 }}>Commit Msg</label>
               <input
                 className="git-input"
+                style={{ width: '100%', padding: '6px 10px', fontSize: '0.8rem', background: 'var(--bg-main)', border: '1px solid var(--border-glass)', borderRadius: '6px', color: 'var(--text-main)' }}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 disabled={disabled}
               />
             </div>
           </div>
-          <div className="git-actions">
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button
-              type="button"
-              className="git-btn"
-              onClick={onInit}
-              disabled={disabled || loadingInit}
-              title="Initialize or link a GitHub repository"
+               className="morphic-button"
+               style={{ flex: 1, justifyContent: 'center' }}
+               onClick={onInit}
+               disabled={disabled || loadingInit}
             >
-              {loadingInit ? 'Init...' : 'Init/Link Repo'}
+              {loadingInit ? '...' : 'Init Repo'}
             </button>
             <button
-              type="button"
-              className="git-btn primary"
-              onClick={onCommit}
-              disabled={disabled || loadingCommit}
+               className="morphic-button primary"
+               style={{ flex: 1.5, justifyContent: 'center' }}
+               onClick={onCommit}
+               disabled={disabled || loadingCommit}
             >
-              {loadingCommit ? 'Committing...' : 'Commit & Push'}
+              {loadingCommit ? '...' : 'Push Code'}
             </button>
           </div>
-          <div className="git-actions" style={{marginTop: '0.4rem'}}>
-            <button
-              type="button"
-              className="git-btn"
-              style={{width: '100%', borderColor: '#60a5fa', color: '#60a5fa'}}
+          <button
+              className="morphic-button"
+              style={{ width: '100%', marginTop: '0.5rem', justifyContent: 'center', borderColor: 'var(--accent)', color: 'var(--accent)' }}
               onClick={onPR}
               disabled={disabled || loadingPR}
             >
               {loadingPR ? 'Creating PR...' : 'Create Pull Request'}
-            </button>
-          </div>
+          </button>
         </>
       )}
-      {status ? <div className="git-status">{status}</div> : null}
+      {status ? <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 500 }}>{status}</div> : null}
     </div>
   );
 }
