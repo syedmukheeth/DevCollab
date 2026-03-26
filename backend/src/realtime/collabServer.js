@@ -4,6 +4,7 @@ const Y = require('yjs');
 const { prisma } = require('../config/db');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
+const { setupWebRTCSignaling } = require('./signaling');
 
 const ROOM_PREFIX = 'file:';
 
@@ -188,6 +189,8 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
         ptyService.endSession(ptyId);
       });
     });
+
+  setupWebRTCSignaling(io);
 
   return { io, redisConnected };
 };

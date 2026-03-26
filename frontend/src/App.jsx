@@ -13,6 +13,7 @@ import { LandingPage } from './components/LandingPage.jsx';
 import { SessionPanel } from './components/SessionPanel.jsx';
 import { MetricsPanel } from './components/MetricsPanel.jsx';
 import { TerminalPanel } from './components/TerminalPanel.jsx';
+import { MeetingPanel } from './components/MeetingPanel.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
@@ -503,6 +504,13 @@ export default function App() {
           </div>
         </div>
         <div className="app-header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {collaborationEnabled && (
+            <MeetingPanel 
+              socket={globalProvider?.socket} 
+              roomId={project?.id || sessionData?.id} 
+              currentUser={sessionUser} 
+            />
+          )}
           <button onClick={() => setShowSidebar(p => !p)} className="morphic-button" title="Toggle Sidebar (Ctrl+B)" style={{ fontSize: '1rem', padding: '4px 8px' }}>☰</button>
           <button onClick={() => setShowMetrics(true)} className="morphic-button" title="System Metrics" style={{ fontSize: '1rem', padding: '4px 8px' }}>📊</button>
           <button onClick={() => setShowSettings(true)} className="morphic-button" title="Settings" style={{ fontSize: '1rem', padding: '4px 8px' }}>⚙️</button>
