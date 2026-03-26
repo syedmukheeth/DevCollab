@@ -3,10 +3,9 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
-export function TerminalPanel({ lines = [] }) {
+export function TerminalPanel({ socket, sessionId }) {
   const terminalRef = useRef(null);
   const xtermRef = useRef(null);
-  const fitAddonRef = useRef(null);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -20,45 +19,64 @@ export function TerminalPanel({ lines = [] }) {
       fontFamily: 'JetBrains Mono, Fira Code, monospace',
       fontSize: 13,
       cursorBlink: true,
-      scrollback: 1000,
-      disableStdin: true
+      scrollback: 1000
     });
 
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
     term.open(terminalRef.current);
     fitAddon.fit();
-
     xtermRef.current = term;
-    fitAddonRef.current = fitAddon;
 
-    const handleResize = () => fitAddon.fit();
+    const handleResize = () => {
+      fitAddon.fit();
+      if (socket?.connected) {
+        socket.emit('pty-resize', { cols: term.cols, rows: term.rows, sessionId });
+      }
+    };
+    
+    // Resize Observer for the container size changes
+    const resizeObserver = new ResizeObserver(() => handleResize());
+    resizeObserver.observe(terminalRef.current);
+    
     window.addEventListener('resize', handleResize);
 
+    term.onData((data) => {
+      if (socket?.connected) {
+        socket.emit('pty-input', data);
+      }
+    });
+
     return () => {
+      resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
       term.dispose();
     };
-  }, []);
+  }, [socket, sessionId]);
 
   useEffect(() => {
-    if (xtermRef.current && lines.length > 0) {
-      // Clear before rewriting because our global state simply replaces 'lines' array each run
-      xtermRef.current.clear();
-      
-      lines.forEach(line => {
-        const text = String(line.payload).replace(/\n/g, '\r\n');
-        if (line.type === 'error' || line.type === 'stderr') {
-          xtermRef.current.writeln(`\x1b[31m${text}\x1b[0m`);
-        } else if (line.type === 'system') {
-          xtermRef.current.writeln(`\x1b[34m${text}\x1b[0m`);
-        } else {
-          xtermRef.current.writeln(text);
-        }
-      });
-      fitAddonRef.current?.fit();
-    }
-  }, [lines]);
+    if (!socket || !xtermRef.current) return;
+
+    const onPtyOutput = (data) => {
+      xtermRef.current.write(data);
+    };
+
+    socket.on('pty-output', onPtyOutput);
+
+    // Initial connection hookup
+    socket.emit('pty-start', { sessionId });
+    
+    // Initial resize sync
+    setTimeout(() => {
+      if (xtermRef.current) {
+        socket.emit('pty-resize', { cols: xtermRef.current.cols, rows: xtermRef.current.rows, sessionId });
+      }
+    }, 100);
+
+    return () => {
+      socket.off('pty-output', onPtyOutput);
+    };
+  }, [socket, sessionId]);
 
   return (
     <div 
