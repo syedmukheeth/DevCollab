@@ -9,6 +9,7 @@ import { InterviewTimer } from './components/InterviewTimer.jsx';
 import { PlaybackModal } from './components/PlaybackModal.jsx';
 import { DiffModal } from './components/DiffModal.jsx';
 import { SettingsModal, ShortcutsOverlay } from './components/SettingsModal.jsx';
+import { LandingPage } from './components/LandingPage.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
@@ -37,6 +38,7 @@ export default function App() {
   const [diffFile, setDiffFile] = useState(null);
   const [outputLines, setOutputLines] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [showLanding, setShowLanding] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
@@ -86,9 +88,21 @@ export default function App() {
   useEffect(() => {
     const bootstrap = async () => {
       try {
-        const authRes = await api.post('/auth/anonymous', {});
-        if (authRes.data?.token) {
-          window.localStorage.setItem('devcollab-token', authRes.data.token);
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        
+        if (tokenFromUrl) {
+          window.localStorage.setItem('devcollab-token', tokenFromUrl);
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setShowLanding(false); // Skip landing if they just authed
+        }
+
+        const currentToken = window.localStorage.getItem('devcollab-token');
+        if (!currentToken) {
+          const authRes = await api.post('/auth/anonymous', {});
+          if (authRes.data?.token) {
+            window.localStorage.setItem('devcollab-token', authRes.data.token);
+          }
         }
 
         const projectsRes = await api.get('/projects');
@@ -444,6 +458,10 @@ export default function App() {
     setDiffFile(activeFile);
   };
 
+  if (showLanding) {
+    return <LandingPage onEnter={() => setShowLanding(false)} />;
+  }
+
   return (
     <div className="app-root">
       <header className="app-header">
@@ -476,6 +494,15 @@ export default function App() {
               style={{ background: '#ef4444', color: 'white' }}
             >
               End Interview
+            </button>
+          )}
+          {githubUser ? (
+             <img src={githubUser.avatarUrl} alt="GitHub" title={githubUser.username} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--accent)' }} />
+          ) : (
+            <button onClick={() => {
+              api.get('/auth/github').then(res => window.location.href = res.data.url).catch(e => console.error(e));
+            }} className="morphic-button" style={{ padding: '6px 14px', fontSize: '0.85rem' }}>
+              Connect GitHub
             </button>
           )}
           <PresenceBar users={presenceStates} />
