@@ -296,3 +296,31 @@ body {
   backdrop-filter: blur(4px);
   z-index: 99999;
 }
+
+/* ── Mobile Responsive Layout ── */
+@media (max-width: 768px) {
+  .app-body {
+    flex-direction: column;
+  }
+  
+  .sidebar {
+    width: 100%;
+    max-height: 250px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-glass);
+  }
+  
+  .editor-main-container {
+    height: calc(100vh - 350px);
+  }
+  
+  .app-header-right {
+    gap: 0.25rem;
+  }
+  
+  .morphic-button {
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+}
+
