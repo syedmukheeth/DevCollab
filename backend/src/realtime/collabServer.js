@@ -16,24 +16,30 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
     }
   });
 
-  let redisConnected = null;
+  let redisConnected = false;
   if (redisUrl) {
-    const url = new URL(redisUrl);
-    const isTls = url.protocol === 'rediss:';
-    const pubClient = createClient({
-      url: redisUrl,
-      socket: isTls
-        ? {
-            tls: true,
-            servername: url.hostname
-          }
-        : undefined
-    });
-    const subClient = pubClient.duplicate();
-    await pubClient.connect();
-    await subClient.connect();
-    io.adapter(createAdapter(pubClient, subClient));
-    redisConnected = true;
+    try {
+      const url = new URL(redisUrl);
+      const isTls = url.protocol === 'rediss:';
+      const pubClient = createClient({
+        url: redisUrl,
+        socket: isTls
+          ? {
+              tls: true,
+              servername: url.hostname
+            }
+          : undefined
+      });
+      const subClient = pubClient.duplicate();
+      await pubClient.connect();
+      await subClient.connect();
+      io.adapter(createAdapter(pubClient, subClient));
+      redisConnected = true;
+      console.log('✅ Redis Adapter connected');
+    } catch (err) {
+      console.warn('⚠️ Redis connection failed, falling back to in-memory adapter for local development.');
+      redisConnected = false;
+    }
   }
 
   const ysocketio = new YSocketIO(io, {

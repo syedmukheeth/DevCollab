@@ -38,8 +38,8 @@ const parseEnv = () => {
     PORT: e.PORT,
     DATABASE_URL: e.DATABASE_URL,
     SESSION_SECRET: e.SESSION_SECRET,
-    CLIENT_ORIGIN: e.CLIENT_ORIGIN,
-    SOCKET_ORIGIN: e.SOCKET_ORIGIN,
+    CLIENT_ORIGIN: e.CLIENT_ORIGIN ? e.CLIENT_ORIGIN.split(',') : '*',
+    SOCKET_ORIGIN: e.SOCKET_ORIGIN ? e.SOCKET_ORIGIN.split(',') : '*',
     REDIS_URL: e.REDIS_URL,
     github: {
       token: e.GITHUB_TOKEN,
