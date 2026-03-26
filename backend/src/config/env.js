@@ -6,10 +6,11 @@ const boolFromString = (v, defaultValue) => {
 };
 
 const envSchema = z.object({
-  NODE_ENV: z.string().optional(),
+  NODE_ENV: z.string().optional().default('development'),
   PORT: z.coerce.number().int().positive().optional().default(4000),
-  MONGO_URI: z.string().min(1),
-  SESSION_SECRET: z.string().min(16),
+  DATABASE_URL: z.string().min(1),
+  MONGO_URI: z.string().optional(),
+  SESSION_SECRET: z.string().min(1),
   CLIENT_ORIGIN: z.string().optional(),
   SOCKET_ORIGIN: z.string().optional(),
   REDIS_URL: z.string().optional(),
@@ -26,16 +27,16 @@ const parseEnv = () => {
   const parsed = envSchema.safeParse(process.env);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
-    const err = new Error(`Invalid environment:\n${issues.join('\n')}`);
+    const err = new Error(`Invalid environment variables:\n${issues.join('\n')}`);
     err.name = 'EnvValidationError';
     throw err;
   }
 
   const e = parsed.data;
   return {
-    NODE_ENV: e.NODE_ENV || 'development',
+    NODE_ENV: e.NODE_ENV,
     PORT: e.PORT,
-    MONGO_URI: e.MONGO_URI,
+    DATABASE_URL: e.DATABASE_URL,
     SESSION_SECRET: e.SESSION_SECRET,
     CLIENT_ORIGIN: e.CLIENT_ORIGIN,
     SOCKET_ORIGIN: e.SOCKET_ORIGIN,
