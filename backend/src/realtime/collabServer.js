@@ -161,29 +161,31 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
           socket.emit('execution-finished', { exitCode });
         }
       });
-      socket.on('pty-start', ({ sessionId } = {}) => {
-        const ptyService = require('../services/ptyService');
-        const ptyId = sessionId || socket.id;
-        const ptyProcess = ptyService.createSession(ptyId);
-        
-        socket.emit('pty-output', '\x1b[32m--- Secure Docker Interactive Shell ---\x1b[0m\r\n');
-        
-        const dataListener = ptyProcess.onData((data) => {
-          socket.emit('pty-output', data);
-        });
+      });
+    });
 
-        socket.on('pty-input', (data) => {
-          ptyProcess.write(data);
-        });
+    socket.on('pty-start', ({ sessionId } = {}) => {
+      const ptyService = require('../services/ptyService');
+      const ptyId = sessionId || socket.id;
+      const ptyProcess = ptyService.createSession(ptyId);
+      
+      socket.emit('pty-output', '\x1b[32m--- Secure Docker Interactive Shell ---\x1b[0m\r\n');
+      
+      const dataListener = ptyProcess.onData((data) => {
+        socket.emit('pty-output', data);
+      });
 
-        socket.on('pty-resize', ({ cols, rows }) => {
-          ptyService.resizeSession(ptyId, cols, rows);
-        });
+      socket.on('pty-input', (data) => {
+        ptyProcess.write(data);
+      });
 
-        socket.on('disconnect', () => {
-          dataListener.dispose();
-          ptyService.endSession(ptyId);
-        });
+      socket.on('pty-resize', ({ cols, rows }) => {
+        ptyService.resizeSession(ptyId, cols, rows);
+      });
+
+      socket.on('disconnect', () => {
+        dataListener.dispose();
+        ptyService.endSession(ptyId);
       });
     });
 

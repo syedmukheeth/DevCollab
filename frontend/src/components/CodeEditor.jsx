@@ -3,6 +3,7 @@ import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { SocketIOProvider } from 'y-socket.io';
 import { MonacoBinding } from 'y-monaco';
+import { initLanguageClient, stopLanguageClient } from '../lib/languageClient';
 
 const LANGUAGE_BY_EXTENSION = {
   js: 'javascript',
@@ -39,6 +40,7 @@ export function CodeEditor({
 
   useEffect(() => {
     return () => {
+      stopLanguageClient();
       bindingRef.current?.destroy?.();
       providerRef.current?.destroy?.();
       ydocRef.current?.destroy?.();
@@ -98,9 +100,13 @@ export function CodeEditor({
             onChange?.(nextValue);
           }
         }}
-        onMount={(editor) => {
+        onMount={(editor, monaco) => {
           editorRef.current = editor;
           window.getEditorCode = () => editor.getValue();
+          
+          if (!readOnly) {
+            initLanguageClient(monaco, language).catch(console.error);
+          }
 
           if (!collaborationEnabled) {
             resetCollaboration();
