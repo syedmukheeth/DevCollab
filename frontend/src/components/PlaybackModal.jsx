@@ -44,36 +44,38 @@ export function PlaybackModal({ room, filename, onClose }) {
   };
 
   return (
-    <div className="playback-modal-overlay">
-      <div className="playback-modal">
-        <div className="playback-header">
-          <h3>Playback: {filename}</h3>
-          <button className="icon-button" onClick={onClose} style={{fontSize: '1.5rem'}}>×</button>
+    <div className="playback-modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="glass-panel" style={{ width: '80%', height: '85%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)' }}>
+          <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>Playback: {filename}</h3>
+          <button className="morphic-button" onClick={onClose} style={{ borderRadius: '50%', width: '32px', height: '32px', justifyContent: 'center', fontSize: '1.2rem' }}>×</button>
         </div>
-        <div className="playback-body">
+        <div style={{ flex: 1, minHeight: 0, padding: '1rem' }}>
           {loading ? (
-            <div className="empty-state">Loading history...</div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>Loading history...</div>
           ) : (
-            <Editor
-              height="100%"
-              defaultLanguage="javascript"
-              theme="vs-dark"
-              value={content}
-              options={{ readOnly: true, minimap: { enabled: false } }}
-            />
+            <div className="monaco-editor-wrapper" style={{ height: '100%' }}>
+              <Editor
+                height="100%"
+                defaultLanguage="javascript"
+                theme={document.documentElement.getAttribute('data-theme') === 'light' ? 'vs-light' : 'vs-dark'}
+                value={content}
+                options={{ readOnly: true, minimap: { enabled: false }, scrollBeyondLastLine: false }}
+              />
+            </div>
           )}
         </div>
-        <div className="playback-controls">
+        <div style={{ padding: '1rem 1.5rem', borderTop: '1px solid var(--border-glass)', background: 'var(--border-dim)' }}>
           <input
             type="range"
-            className="playback-slider"
+            style={{ width: '100%', accentColor: 'var(--accent)', cursor: 'pointer' }}
             min={0}
             max={Math.max(0, updates.length - 1)}
             value={currentIndex}
             onChange={handleSliderChange}
             disabled={loading || updates.length === 0}
           />
-          <div className="playback-info">
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.5rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
             <span>Step {currentIndex + 1} of {updates.length}</span>
             <span>{updates[currentIndex]?.createdAt ? new Date(updates[currentIndex].createdAt).toLocaleString() : ''}</span>
           </div>
