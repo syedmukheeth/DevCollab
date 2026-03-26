@@ -1,10 +1,18 @@
 const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+let prisma;
+
+const getPrisma = () => {
+  if (!prisma) {
+    prisma = new PrismaClient();
+  }
+  return prisma;
+};
 
 const connectDB = async () => {
   try {
-    await prisma.$connect();
+    const client = getPrisma();
+    await client.$connect();
     console.log('PostgreSQL (Prisma) connected');
   } catch (err) {
     console.error('Database connection error', err);
@@ -14,5 +22,7 @@ const connectDB = async () => {
 
 module.exports = {
   connectDB,
-  prisma
+  get prisma() {
+    return getPrisma();
+  }
 };
