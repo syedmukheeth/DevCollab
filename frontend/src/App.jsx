@@ -21,6 +21,7 @@ export default function App() {
   const [banner, setBanner] = useState('');
   const [project, setProject] = useState(null);
   const [files, setFiles] = useState([]);
+  const [openedFileIds, setOpenedFileIds] = useState([]);
   const [activeFileId, setActiveFileId] = useState(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [sessionData, setSessionData] = useState(null);
@@ -80,9 +81,13 @@ export default function App() {
     setBanner(message || 'Running in local workspace mode. Changes are saved in your browser.');
     setProject(workspace.project);
     setFiles(workspace.files);
-    setActiveFileId(workspace.files[0]?.id || null);
+    const firstId = workspace.files[0]?.id || null;
+    setActiveFileId(firstId);
+    if (firstId && !openedFileIds.includes(firstId)) {
+      setOpenedFileIds([firstId]);
+    }
     const localUser = getOrCreateLocalUser();
-    setPresenceStates([{ user: localUser, status: 'local', activeFile: workspace.files[0]?.id || null }]);
+    setPresenceStates([{ user: localUser, status: 'local', activeFile: firstId }]);
   };
 
   useEffect(() => {
@@ -118,7 +123,11 @@ export default function App() {
         const filesRes = await api.get(`/projects/${activeProject.id}/files`);
         const nextFiles = filesRes.data || [];
         setFiles(nextFiles);
-        setActiveFileId(nextFiles[0]?.id || null);
+        const firstId = nextFiles[0]?.id || null;
+        setActiveFileId(firstId);
+        if (firstId) {
+          setOpenedFileIds([firstId]);
+        }
         setBanner('');
 
         await fetchGithubUser();
@@ -437,6 +446,23 @@ export default function App() {
       language,
       fileId: activeFileId
     });
+    });
+  };
+
+  const handleSelectFile = (id) => {
+    if (!openedFileIds.includes(id)) {
+      setOpenedFileIds(prev => [...prev, id]);
+    }
+    setActiveFileId(id);
+  };
+
+  const handleCloseTab = (e, id) => {
+    e.stopPropagation();
+    const newOpened = openedFileIds.filter(fId => fId !== id);
+    setOpenedFileIds(newOpened);
+    if (activeFileId === id) {
+      setActiveFileId(newOpened.length > 0 ? newOpened[newOpened.length - 1] : null);
+    }
   };
 
   const handleOpenHistory = () => {
@@ -514,7 +540,7 @@ export default function App() {
           <FileExplorer
             files={files}
             activeFileId={activeFileId}
-            onSelectFile={setActiveFileId}
+            onSelectFile={handleSelectFile}
             onCreateFile={handleCreateFile}
             onDeleteFile={handleDeleteFile}
             onRenameFile={handleRenameFile}
@@ -542,8 +568,78 @@ export default function App() {
               onConnect={handleConnectGitHub}
             />
           </div>
-          {activeFile ? (
-            <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, padding: '0.5rem' }}>
+          <div className="editor-workspace" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
+            {openedFileIds.length > 0 && (
+              <div className="tabs-bar" style={{ display: 'flex', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border-glass)', overflowX: 'auto' }}>
+                {openedFileIds.map(id => {
+                  const f = files.find(file => file.id === id);
+                  if (!f) return null;
+                  const isActive = activeFileId === id;
+                  return (
+                    <div
+                      key={id}
+                      onClick={() => handleSelectFile(id)}
+                      style={{
+                        padding: '8px 16px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: isActive ? 'var(--bg-main)' : 'transparent',
+                        borderRight: '1px solid var(--border-glass)',
+                        borderTop: isActive ? '2px solid var(--accent)' : '2px solid transparent',
+                        fontSize: '0.85rem',
+                        fontWeight: isActive ? 600 : 400,
+                        color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
+                      }}
+                    >
+                      {f.name}
+                      <button
+                        onClick={(e) => handleCloseTab(e, id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: 'var(--text-muted)',
+                          cursor: 'pointer',
+                          fontSize: '1rem',
+                          lineHeight: 1,
+                          padding: '0 2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: '4px'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            <div className="monaco-editor-wrapper" style={{ flex: 1, borderRadius: openedFileIds.length > 0 ? '0 0 12px 12px' : '12px' }}>
+              {activeFile ? (
+                <CodeEditor
+                  key={`${activeFile.id}-${theme}`}
+                  file={activeFile}
+                  theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
+                  readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
+                  collaborationEnabled={collaborationEnabled}
+                  onChange={(content) => {
+                    const nextFiles = files.map(f => f.id === activeFile.id ? { ...f, content } : f);
+                    setFiles(nextFiles);
+                    if (isLocalMode) persistLocalWorkspace(project, nextFiles);
+                  }}
+                  editorSettings={editorSettings}
+                />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  No file open. Select a file from the explorer.
+                </div>
+              )}
+            </div>
+            <div style={{ height: '30%', marginTop: '1rem', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.4rem 0.8rem', gap: '0.5rem' }}>
                 <button onClick={handleOpenDiff} className="morphic-button">
                   Diff 📂
