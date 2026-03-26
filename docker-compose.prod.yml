@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-devcollab}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-supersecret}
+      POSTGRES_DB: ${DB_NAME:-devcollab_prod}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - devcollab_net
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    networks:
+      - devcollab_net
+
+  api:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - db
+      - redis
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${DB_USER:-devcollab}:${DB_PASSWORD:-supersecret}@db:5432/${DB_NAME:-devcollab_prod}?schema=public
+      REDIS_URL: redis://redis:6379
+      CLIENT_ORIGIN: ${FRONTEND_URL:-https://devcollab.com}
+      SESSION_SECRET: ${SESSION_SECRET}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+    ports:
+      - "4000:4000"
+    volumes:
+      # Required for execution container spawning mapping (Docker-in-Docker via socket)
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - devcollab_net
+    deploy:
+      replicas: 3
+      update_config:
+        parallelism: 1
+        delay: 10s
+
+volumes:
+  pgdata:
+  redisdata:
+
+networks:
+  devcollab_net:
+    driver: bridge
