@@ -546,24 +546,15 @@ export default function App() {
           onClose={() => setDiffFile(null)}
         />
       )}
-      <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0' }}>
+      <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0', zIndex: 10000, position: 'relative' }}>
         <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>
           Built with ❤️ by <a 
             href="https://www.linkedin.com/in/syedmukheeth" 
             target="_blank" 
             rel="noopener noreferrer" 
-            style={{ color: 'var(--text-main)', textDecoration: 'none' }}
+            style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 800, borderBottom: '2px solid var(--accent)' }}
           >
             Syed Mukheeth
-          </a>
-          <span style={{ margin: '0 0.75rem', opacity: 0.3 }}>|</span>
-          <a 
-            href="https://www.linkedin.com/in/syedmukheeth" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}
-          >
-            LinkedIn 🔗
           </a>
         </div>
       </footer>
