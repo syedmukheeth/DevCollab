@@ -37,7 +37,11 @@ app.use(
   })
 );
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', (req, res) => res.json({ 
+  status: 'ok', 
+  uptime: process.uptime(),
+  timestamp: new Date().toISOString()
+}));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
@@ -48,21 +52,25 @@ app.use('/api/sessions', sessionRoutes);
 app.use(notFound);
 app.use(errorHandler);
 
-let mongoReady = false;
+let dbReady = false;
 let redisReady = null; // null=disabled
 
 app.get('/ready', (req, res) => {
-  const ok = mongoReady && (redisReady === null || redisReady === true);
+  const ok = dbReady && (redisReady === null || redisReady === true);
   res.status(ok ? 200 : 503).json({
     status: ok ? 'ready' : 'not_ready',
-    mongo: mongoReady ? 'up' : 'down',
-    redis: redisReady === null ? 'disabled' : redisReady ? 'up' : 'down'
+    database: dbReady ? 'up' : 'down',
+    redis: redisReady === null ? 'disabled' : redisReady ? 'up' : 'down',
+    services: {
+      api: 'up',
+      collaboration: redisReady === null || redisReady ? 'ready' : 'degraded'
+    }
   });
 });
 
 const start = async () => {
   await connectDB.connectDB();
-  mongoReady = true;
+  dbReady = true;
 
   const httpServer = http.createServer(app);
 
