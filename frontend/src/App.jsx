@@ -123,7 +123,6 @@ export default function App() {
 
         await fetchGithubUser();
 
-        const urlParams = new URLSearchParams(window.location.search);
         const shareLink = urlParams.get('join');
         if (shareLink) {
           try {
