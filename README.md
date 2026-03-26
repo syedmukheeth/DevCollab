@@ -28,8 +28,53 @@
 - **State Management**: **Yjs** (CRDTs) with Redis persistence for seamless real-time syncing.
 - **Sandboxing**: Isolated Docker containers with resource limits (CPU/RAM) and network isolation.
 
-> [!NOTE]
-> For a detailed architectural breakdown and data flow diagrams, see [SYSTEM_DESIGN.md](file:///e:/DevCollab/docs/SYSTEM_DESIGN.md).
+### High-Level System Design
+
+```mermaid
+graph TD
+    Client[React Frontend] -->|HTTPS/REST| API[Express API]
+    Client -->|WebSockets| SocketServer[Socket.io Server]
+    
+    subgraph "Backend Services"
+        API -->|Prisma| DB[(PostgreSQL)]
+        API -->|GitHub API| GitHub[GitHub REST API]
+        SocketServer -->|Adapter| Redis[(Redis)]
+        SocketServer -->|Execution| Docker[Docker Sandbox]
+    end
+    
+    subgraph "Storage"
+        DB --- Files[(Project Files)]
+        DB --- Snapshots[(Yjs Snapshots)]
+    end
+```
+
+### Data Flow: Code Sync & Execution
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant S as Socket Server
+    participant DB as Database
+    participant D as Docker
+    
+    C->>S: WebSocket Connect (Room: ProjectID)
+    S->>DB: Load Snapshot
+    DB-->>S: Return Snapshot
+    S-->>C: Sync Initial State
+    
+    Note over C,S: Continuous Sync via Yjs Updates
+    
+    C->>S: Emit 'execute-code'
+    S->>D: Spawn Container (Code, Language)
+    D-->>S: Stream Output
+    S-->>C: Emit 'execution-output'
+```
+
+### Key Components
+1. **Real-time Collaboration (CRDT)**: Powered by **Yjs** with `y-socket.io`. Conflict-free editing ensures all clients converge to the same state.
+2. **Code Execution Sandbox**: Isolated **Docker** containers with resource limits (CPU/Memory) and network isolation.
+3. **GitHub Integration**: Seamless surrogate proxying for repository initialization, commits, and Pull Requests via **Octokit**.
+4. **Persistence Layer**: Relational data management using **PostgreSQL** and the **Prisma ORM**.
 
 ### Service Observability
 DevCollab provides built-in health and readiness monitoring for production stability:
