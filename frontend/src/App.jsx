@@ -10,6 +10,8 @@ import { PlaybackModal } from './components/PlaybackModal.jsx';
 import { DiffModal } from './components/DiffModal.jsx';
 import { SettingsModal, ShortcutsOverlay } from './components/SettingsModal.jsx';
 import { LandingPage } from './components/LandingPage.jsx';
+import { SessionPanel } from './components/SessionPanel.jsx';
+import { MetricsPanel } from './components/MetricsPanel.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
@@ -42,6 +44,7 @@ export default function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [showSidebar, setShowSidebar] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [showMetrics, setShowMetrics] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [editorSettings, setEditorSettings] = useState(() => {
     try {
@@ -500,6 +503,7 @@ export default function App() {
         </div>
         <div className="app-header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <button onClick={() => setShowSidebar(p => !p)} className="morphic-button" title="Toggle Sidebar (Ctrl+B)" style={{ fontSize: '1rem', padding: '4px 8px' }}>☰</button>
+          <button onClick={() => setShowMetrics(true)} className="morphic-button" title="System Metrics" style={{ fontSize: '1rem', padding: '4px 8px' }}>📊</button>
           <button onClick={() => setShowSettings(true)} className="morphic-button" title="Settings" style={{ fontSize: '1rem', padding: '4px 8px' }}>⚙️</button>
           <button onClick={() => setShowShortcuts(true)} className="morphic-button" title="Keyboard Shortcuts" style={{ fontSize: '1rem', padding: '4px 8px' }}>⌨️</button>
           <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme (Ctrl+Shift+T)">
@@ -546,6 +550,7 @@ export default function App() {
             disabled={isInitializing || !project}
             presenceStates={presenceStates}
           />
+          <SessionPanel projectId={project?.id} />
         </aside>
         )}
         <main className="editor-main-container">
@@ -682,8 +687,19 @@ export default function App() {
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          onSave={(s) => setEditorSettings(s)}
+          onSave={(newSettings) => setEditorSettings(newSettings)}
         />
+      )}
+      {showMetrics && (
+        <div className="playback-modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
+          <div className="glass-panel" style={{ width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>📊 System Telemetry</h3>
+              <button className="morphic-button" onClick={() => setShowMetrics(false)} style={{ borderRadius: '50%', width: '32px', height: '32px', justifyContent: 'center', fontSize: '1.2rem' }}>×</button>
+            </div>
+            <MetricsPanel />
+          </div>
+        </div>
       )}
       {showShortcuts && (
         <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />
