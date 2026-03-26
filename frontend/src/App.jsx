@@ -14,6 +14,7 @@ import { SessionPanel } from './components/SessionPanel.jsx';
 import { MetricsPanel } from './components/MetricsPanel.jsx';
 import { TerminalPanel } from './components/TerminalPanel.jsx';
 import { MeetingPanel } from './components/MeetingPanel.jsx';
+import { CopilotPanel } from './components/CopilotPanel.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
@@ -713,6 +714,9 @@ export default function App() {
       {showShortcuts && (
         <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />
       )}
+      
+      <CopilotPanel disabled={isInitializing || !project} />
+
       <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0', zIndex: 10000, position: 'relative' }}>
         <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>
           Built with ❤️ by <a 

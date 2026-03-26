@@ -17,6 +17,7 @@ const authRoutes = require('./routes/authRoutes');
 const { verifyAuthToken } = require('./utils/authToken');
 const metricsRoutes = require('./routes/metricsRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
+const aiRoutes = require('./routes/aiRoutes');
 const { setupLspServer } = require('./services/lspManager');
 
 const env = parseEnv();
@@ -84,6 +85,7 @@ app.use('/api', fileRoutes);
 app.use('/api', githubRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/metrics', metricsRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
