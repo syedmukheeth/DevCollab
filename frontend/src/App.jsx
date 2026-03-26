@@ -8,6 +8,8 @@ import { PresenceBar } from './components/PresenceBar.jsx';
 import { InterviewTimer } from './components/InterviewTimer.jsx';
 import { PlaybackModal } from './components/PlaybackModal.jsx';
 import { DiffModal } from './components/DiffModal.jsx';
+import { SettingsModal, ShortcutsOverlay } from './components/SettingsModal.jsx';
+import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
 
@@ -35,6 +37,14 @@ export default function App() {
   const [diffFile, setDiffFile] = useState(null);
   const [outputLines, setOutputLines] = useState([]);
   const [isRunning, setIsRunning] = useState(false);
+  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [editorSettings, setEditorSettings] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('devcollab-editor-settings') || '{}');
+    } catch { return {}; }
+  });
 
   const isLocalMode = mode === 'local';
   const collaborationEnabled = !isLocalMode;
@@ -366,6 +376,19 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
+  // Register keyboard shortcuts
+  useEffect(() => {
+    return registerShortcuts({
+      'run-code': handleRunCode,
+      'save': () => {},
+      'toggle-sidebar': () => setShowSidebar(p => !p),
+      'toggle-terminal': () => {},
+      'toggle-theme': toggleTheme,
+      'new-file': () => {},
+      'show-shortcuts': () => setShowShortcuts(p => !p)
+    });
+  });
+
   const activeFile = useMemo(
     () => files.find((f) => f.id === activeFileId) || null,
     [files, activeFileId]
@@ -433,8 +456,11 @@ export default function App() {
             {isLocalMode ? ' • Local mode' : ' • Cloud mode'}
           </div>
         </div>
-        <div className="app-header-right" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
+        <div className="app-header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <button onClick={() => setShowSidebar(p => !p)} className="morphic-button" title="Toggle Sidebar (Ctrl+B)" style={{ fontSize: '1rem', padding: '4px 8px' }}>☰</button>
+          <button onClick={() => setShowSettings(true)} className="morphic-button" title="Settings" style={{ fontSize: '1rem', padding: '4px 8px' }}>⚙️</button>
+          <button onClick={() => setShowShortcuts(true)} className="morphic-button" title="Keyboard Shortcuts" style={{ fontSize: '1rem', padding: '4px 8px' }}>⌨️</button>
+          <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme (Ctrl+Shift+T)">
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
           {sessionData?.interviewMode && (
@@ -457,6 +483,7 @@ export default function App() {
       </header>
       {banner ? <div className="banner-glass">{banner}</div> : null}
       <div className="app-body">
+        {showSidebar && (
         <aside className="sidebar glass-panel">
           <FileExplorer
             files={files}
@@ -469,6 +496,7 @@ export default function App() {
             presenceStates={presenceStates}
           />
         </aside>
+        )}
         <main className="editor-main-container">
           <div className="git-panel-wrapper glass-panel" style={{ padding: '0.5rem' }}>
             <GitPanel
@@ -545,6 +573,15 @@ export default function App() {
           file={diffFile}
           onClose={() => setDiffFile(null)}
         />
+      )}
+      {showSettings && (
+        <SettingsModal
+          onClose={() => setShowSettings(false)}
+          onSave={(s) => setEditorSettings(s)}
+        />
+      )}
+      {showShortcuts && (
+        <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />
       )}
       <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0', zIndex: 10000, position: 'relative' }}>
         <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>
