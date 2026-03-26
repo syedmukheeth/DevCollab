@@ -2,7 +2,7 @@ const { Octokit } = require('@octokit/rest');
 const Y = require('yjs');
 const { prisma } = require('../config/db');
 const ApiError = require('../utils/ApiError');
-const logger = require('../utils/logger');
+const _logger = require('../utils/logger');
 
 const getEnv = (name) => {
   const v = process.env[name];
@@ -258,8 +258,8 @@ const createPullRequest = async ({ projectId, ownerId, head, base, title, body }
   const { data } = await octokit.pulls.create({
     owner: project.githubOwner,
     repo: project.githubRepo,
-    title: title || `Pull Request from DevCollab`,
-    body: body || `This PR was created from the DevCollab IDE.`,
+    title: title || 'Pull Request from DevCollab',
+    body: body || 'This PR was created from the DevCollab IDE.',
     head, // branch name
     base: base || project.githubDefaultBranch || 'main'
   });

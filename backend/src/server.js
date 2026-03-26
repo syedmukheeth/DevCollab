@@ -34,9 +34,9 @@ app.use(
   helmet.contentSecurityPolicy({
     useDefaults: true,
     directives: {
-      "script-src": ["'self'"],
-      "object-src": ["'none'"],
-      "upgrade-insecure-requests": [],
+      'script-src': ['\'self\''],
+      'object-src': ['\'none\''],
+      'upgrade-insecure-requests': [],
     },
   })
 );
@@ -54,7 +54,7 @@ app.use((req, res, next) => {
       if (decoded && decoded.userId) {
         req.userId = decoded.userId;
       }
-    } catch (e) { /* ignore invalid tokens for rate limiting */ }
+    } catch (_e) { /* ignore invalid tokens for rate limiting */ }
   }
   next();
 });
@@ -69,7 +69,7 @@ app.use(
     keyGenerator: (req) => {
       return req.userId || req.ip;
     },
-    message: { message: "Too many requests, please try again later." }
+    message: { message: 'Too many requests, please try again later.' }
   })
 );
 
@@ -126,12 +126,12 @@ const start = async () => {
   }
 
   httpServer.listen(env.PORT, () => {
-    // eslint-disable-next-line no-console
+     
     console.log(`Server running on port ${env.PORT}`);
   });
 
   const shutdown = () => {
-    // eslint-disable-next-line no-console
+     
     console.log('Shutting down...');
     httpServer.close(() => {
       process.exit(0);
@@ -155,7 +155,7 @@ process.on('unhandledRejection', (reason) => {
 });
 
 start().catch((err) => {
-  // eslint-disable-next-line no-console
+   
   console.error(err);
   process.exit(1);
 });

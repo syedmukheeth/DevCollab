@@ -1,5 +1,6 @@
 const githubAuthService = require('../services/githubAuthService');
 const githubService = require('../services/githubService');
+const ApiError = require('../utils/ApiError');
 
 const getAuthUrl = async (req, res, next) => {
   try {

@@ -60,7 +60,7 @@ const runCode = async ({ code, language, onData, onDone, timeoutMs = 10000 }) =>
   // Ensure image exists locally (in production, you'd pull these beforehand)
   try {
     await docker.pull(runtime.image);
-  } catch (err) {
+  } catch (_err) {
     // Ignore pull errors (might be offline, or already there)
   }
 
@@ -113,7 +113,7 @@ const runCode = async ({ code, language, onData, onDone, timeoutMs = 10000 }) =>
     let timeoutReached = false;
     const executionTimeout = setTimeout(async () => {
       timeoutReached = true;
-      try { await container.stop(); } catch (e) {}
+      try { await container.stop(); } catch (_e) { /* ignore */ }
     }, timeoutMs);
 
     const result = await container.wait();
@@ -131,11 +131,11 @@ const runCode = async ({ code, language, onData, onDone, timeoutMs = 10000 }) =>
     if (container) {
       try {
         await container.remove({ force: true });
-      } catch (e) {} // ignore
+      } catch (_e) { /* ignore */ }
     }
     try {
       await fs.rm(tempDir, { recursive: true, force: true });
-    } catch (e) {}
+    } catch (_e) { /* ignore */ }
   }
 };
 
