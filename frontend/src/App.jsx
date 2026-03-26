@@ -446,7 +446,6 @@ export default function App() {
       language,
       fileId: activeFileId
     });
-    });
   };
 
   const handleSelectFile = (id) => {
@@ -651,19 +650,9 @@ export default function App() {
                   {isRunning ? 'Running...' : 'Run ▶'}
                 </button>
               </div>
-              <div className="monaco-editor-wrapper" style={{ flex: 1, minHeight: 0, marginTop: '0.5rem' }}>
-                <CodeEditor
-                    key={`${activeFile.id}-${theme}`}
-                    file={activeFile}
-                    theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
-                    readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
-                    collaborationEnabled={collaborationEnabled}
-                    onChange={(content) => handleContentChange(activeFile.id, content)}
-                />
-              </div>
-              <div style={{ height: '30%', marginTop: '1rem', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ flex: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', background: 'var(--bg-panel)', borderRadius: '12px', overflow: 'hidden' }}>
                 <div style={{ padding: '0.3rem 0.8rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Terminal</div>
-                <div className="terminal-wrapper">
+                <div className="terminal-wrapper" style={{ flex: 1, margin: 0, borderRadius: 0, border: 'none', borderTop: '1px solid var(--border-glass)' }}>
                   {outputLines.length === 0 && <span style={{ color: 'var(--text-muted)' }}>Output will appear here...</span>}
                   {outputLines.map((line, index) => (
                     <div key={`${line.type}-${index}`} style={{ color: line.type === 'error' || line.type === 'stderr' ? '#ef4444' : (line.type === 'system' ? 'var(--accent)' : 'var(--text-main)') }}>
@@ -673,13 +662,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="glass-panel" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-              {isInitializing
-                ? 'Setting up your workspace...'
-                : 'Create a file to start coding.'}
-            </div>
-          )}
+          </div>
         </main>
       </div>
       {playbackFile && (
