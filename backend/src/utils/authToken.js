@@ -31,7 +31,10 @@ const verifyAuthToken = ({ token, secret }) => {
   if (parts.length !== 2) return { ok: false, reason: 'malformed' };
   const [payloadB64, sig] = parts;
   const expected = sign(payloadB64, secret);
-  const sigOk = crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+  const sigBuf = Buffer.from(sig);
+  const expectedBuf = Buffer.from(expected);
+  if (sigBuf.length !== expectedBuf.length) return { ok: false, reason: 'bad_signature' };
+  const sigOk = crypto.timingSafeEqual(sigBuf, expectedBuf);
   if (!sigOk) return { ok: false, reason: 'bad_signature' };
   const payloadJson = Buffer.from(payloadB64.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
   let payload;
