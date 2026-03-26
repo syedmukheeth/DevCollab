@@ -16,7 +16,7 @@ router.get('/system', (req, res) => {
     const qm = getQueueMetrics();
     qDepth = qm.depth;
     running = qm.running;
-  } catch(e) { /* ignore */ }
+  } catch (_e) { /* ignore */ }
 
   res.json({
     memory: {

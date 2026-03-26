@@ -8,8 +8,6 @@ const { setupWebRTCSignaling } = require('./signaling');
 
 const ROOM_PREFIX = 'file:';
 
-const makeRoom = (fileId) => `${ROOM_PREFIX}${fileId}`;
-
 const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
   const io = new Server(httpServer, {
     cors: {
@@ -37,7 +35,7 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
       io.adapter(createAdapter(pubClient, subClient));
       redisConnected = true;
       console.log('✅ Redis Adapter connected');
-    } catch (err) {
+    } catch (_err) {
       console.warn('⚠️ Redis connection failed, falling back to in-memory adapter for local development.');
       redisConnected = false;
     }
@@ -81,7 +79,6 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
             create: { room, fileId, state: Buffer.from(update) }
           });
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('Failed to persist Yjs snapshot', err);
         }
       }, 1000)
@@ -118,12 +115,10 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
             }
           });
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error('Failed to persist yjs update', err);
         }
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error('Failed to load Yjs snapshot', err);
     }
   });
@@ -137,11 +132,8 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
   });
 
   io.on('connection', (socket) => {
-    socket.on('execute-code', async ({ code, language, fileId, sessionId }) => {
-      // In a real app, verify the auth token and ensure the user is an EDITOR/INTERVIEWER in this session.
-      // For this implementation, we will trust the socket event or perform a quick check if needed.
+    socket.on('execute-code', async ({ code, language, sessionId: _sessionId }) => {
       const { runCode } = require('../services/executionService');
-      
       socket.emit('execution-output', { type: 'system', payload: `Starting execution environment for ${language}...\n` });
 
       await runCode({
@@ -161,7 +153,6 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
           }
           socket.emit('execution-finished', { exitCode });
         }
-      });
       });
     });
 
@@ -190,6 +181,13 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
       });
     });
 
+    // Simple signaling for project-level awareness (cursors are handled by Yjs)
+    socket.on('join-project', (projectId) => {
+      socket.join(`project-${projectId}`);
+    });
+  });
+
+  // Dedicated WebRTC signaling for audio/video calling
   setupWebRTCSignaling(io);
 
   return { io, redisConnected };

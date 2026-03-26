@@ -23,7 +23,7 @@ router.get('/github/callback', async (req, res, next) => {
     if (!code || !userId) {
       return res.status(400).json({ message: 'Missing code or state' });
     }
-    const githubUser = await handleGitHubCallback(code, userId);
+    const _githubUser = await handleGitHubCallback(code, userId);
     const token = issueAuthToken({
       userId,
       secret: process.env.SESSION_SECRET,

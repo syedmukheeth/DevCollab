@@ -1,7 +1,6 @@
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
 
-// eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
   let { statusCode, message } = err;
   

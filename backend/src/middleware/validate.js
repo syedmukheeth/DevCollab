@@ -76,7 +76,7 @@ const projectSchemas = {
 const fileSchemas = {
   create: {
     body: z.object({
-      name: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._\-]+$/, 'Invalid filename'),
+      name: z.string().min(1).max(255).regex(/^[a-zA-Z0-9._-]+$/, 'Invalid filename'),
       content: z.string().max(1_000_000).optional().default('')
     })
   },

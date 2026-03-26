@@ -34,7 +34,7 @@ jobs:
 
       - name: Lint backend
         working-directory: backend
-        run: npx eslint . --ext .js --max-warnings 0 || true
+        run: npx eslint . --ext .js --max-warnings 0
 
       - name: Generate Prisma client
         working-directory: backend
@@ -57,6 +57,19 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      # ── Docker Build Verification ──
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: devcollab-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
@@ -75,7 +88,7 @@ jobs:
 
       - name: Audit backend
         working-directory: backend
-        run: npm audit --production --audit-level=high || true
+        run: npm audit --production --audit-level=high
 
       - name: Install frontend deps
         working-directory: frontend
@@ -83,4 +96,4 @@ jobs:
 
       - name: Audit frontend
         working-directory: frontend
-        run: npm audit --production --audit-level=high || true
+        run: npm audit --production --audit-level=high
