@@ -70,4 +70,47 @@ const requireProjectOwner = async (req, res, next) => {
   }
 };
 
-module.exports = { requireRole, requireProjectOwner };
+/**
+ * Checks if the authenticated user has access to the project with specific roles.
+ * @param {...string} allowedRoles - 'VIEWER', 'EDITOR', 'ADMIN'
+ */
+const requireProjectAccess = (...allowedRoles) => async (req, res, next) => {
+  try {
+    const projectId = req.params.projectId || req.body.projectId || req.params.id;
+    const userId = req.userId;
+
+    if (!projectId || !userId) {
+      return next(new ApiError(400, 'Project ID and authentication are required'));
+    }
+
+    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) return next(new ApiError(404, 'Project not found'));
+
+    // Owner always has access as ADMIN
+    if (project.ownerId === userId) {
+      req.project = project;
+      req.projectRole = 'ADMIN';
+      return next();
+    }
+
+    const access = await prisma.projectAccess.findUnique({
+      where: { projectId_userId: { projectId, userId } }
+    });
+
+    if (!access) {
+      return next(new ApiError(403, 'You do not have access to this project'));
+    }
+
+    if (allowedRoles.length > 0 && !allowedRoles.includes(access.role)) {
+      return next(new ApiError(403, `Insufficient permissions. Required: ${allowedRoles.join(' or ')}`));
+    }
+
+    req.project = project;
+    req.projectRole = access.role;
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { requireRole, requireProjectOwner, requireProjectAccess };

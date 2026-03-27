@@ -116,6 +116,88 @@ export function CodeEditor({
             initLanguageClient(monaco, language).catch(console.error);
           }
 
+          // Collaborative Cursors & Selections logic
+          let decorations = [];
+          const awareness = provider.awareness;
+
+          const updateDecorations = () => {
+            const states = provider.awareness.getStates();
+            const nextDecorations = [];
+
+            states.forEach((state, clientID) => {
+              if (clientID === provider.awareness.clientID) return;
+              if (state.activeFile !== fileId) return;
+              if (!state.cursor) return;
+
+              const { line, ch, selection } = state.cursor;
+              const user = state.user || { name: 'Anonymous', color: '#ffcc00' };
+
+              // Cursor Decoration
+              nextDecorations.push({
+                range: new monaco.Range(line, ch, line, ch + 1),
+                options: {
+                  className: `remote-cursor-${clientID}`,
+                  before: {
+                    content: user.name,
+                    inlineClassName: `remote-cursor-label-${clientID}`,
+                  },
+                  stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+                }
+              });
+
+              // Selection Decoration
+              if (selection) {
+                nextDecorations.push({
+                  range: new monaco.Range(selection.startLine, selection.startColumn, selection.endLine, selection.endColumn),
+                  options: {
+                    className: `remote-selection-${clientID}`,
+                    stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges
+                  }
+                });
+              }
+
+              // Inject CSS for this client dynamically
+              const styleId = `cursor-style-${clientID}`;
+              let style = document.getElementById(styleId);
+              if (!style) {
+                style = document.createElement('style');
+                style.id = styleId;
+                document.head.appendChild(style);
+              }
+              style.textContent = `
+                .remote-cursor-${clientID} { border-left: 2px solid ${user.color}; }
+                .remote-cursor-label-${clientID} {
+                  position: absolute; top: -18px; left: 0; background: ${user.color};
+                  color: white; font-size: 10px; padding: 1px 4px; border-radius: 3px;
+                  white-space: nowrap; font-weight: bold; pointer-events: none;
+                }
+                .remote-selection-${clientID} { background: ${user.color}33; }
+              `;
+            });
+
+            decorations = editor.deltaDecorations(decorations, nextDecorations);
+          };
+
+          awareness.on('change', updateDecorations);
+
+          editor.onDidChangeCursorPosition(e => {
+            const sel = editor.getSelection();
+            awareness.setLocalStateField('cursor', {
+              line: e.position.lineNumber,
+              ch: e.position.column,
+              selection: sel.isEmpty() ? null : {
+                startLine: sel.startLineNumber,
+                startColumn: sel.startColumn,
+                endLine: sel.endLineNumber,
+                endColumn: sel.endColumn
+              }
+            });
+          });
+
+          return () => {
+            awareness.off('change', updateDecorations);
+          };
+
           if (!collaborationEnabled) {
             resetCollaboration();
             return;

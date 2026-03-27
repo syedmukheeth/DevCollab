@@ -17,6 +17,7 @@ import { MeetingPanel } from './components/MeetingPanel.jsx';
 import { CopilotPanel } from './components/CopilotPanel.jsx';
 import AssetGallery from './components/AssetGallery.jsx';
 import { SearchPanel } from './components/SearchPanel.jsx';
+import { ShareModal } from './components/ShareModal.jsx';
 import { Breadcrumbs } from './components/Breadcrumbs.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
@@ -53,6 +54,7 @@ export default function App() {
   const [showMetrics, setShowMetrics] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showAssets, setShowAssets] = useState(false);
+  const [showShare, setShowShare] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState('explorer');
   const [currentUser, setCurrentUser] = useState(null);
   const [editorSettings, setEditorSettings] = useState(() => {
@@ -538,6 +540,7 @@ export default function App() {
           <button onClick={() => setShowSettings(true)} className="morphic-button" title="Settings" style={{ fontSize: '1rem', padding: '4px 8px' }}>⚙️</button>
           <button onClick={() => setShowShortcuts(true)} className="morphic-button" title="Keyboard Shortcuts" style={{ fontSize: '1rem', padding: '4px 8px' }}>⌨️</button>
           <button onClick={() => setShowAssets(true)} className="morphic-button" title="Project Assets" style={{ fontSize: '1rem', padding: '4px 8px' }}>🖼️</button>
+          <button onClick={() => setShowShare(true)} className="morphic-button" title="Share Project" style={{ fontSize: '1rem', padding: '4px 8px', background: 'var(--accent)', color: 'white' }}>Share</button>
           <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme (Ctrl+Shift+T)">
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
@@ -774,6 +777,10 @@ export default function App() {
             projectId={project?.id}
             fileId={activeFileId}
           />
+      
+      {showShare && project && (
+        <ShareModal projectId={project.id} onClose={() => setShowShare(false)} />
+      )}
 
       <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0', zIndex: 10000, position: 'relative' }}>
         <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>
