@@ -29,7 +29,8 @@ export function CodeEditor({
   readOnly,
   collaborationEnabled,
   onChange,
-  editorSettings = {}
+  editorSettings = {},
+  currentUser = null
 }) {
   const editorRef = useRef(null);
   const ydocRef = useRef(null);
@@ -125,7 +126,12 @@ export function CodeEditor({
           providerRef.current = provider;
 
           const localUser = getOrCreateLocalUser();
-          provider.awareness.setLocalStateField('user', localUser);
+          const userToBroadcast = {
+            ...localUser,
+            name: currentUser?.username || currentUser?.name || localUser.name,
+            avatar: currentUser?.avatarUrl
+          };
+          provider.awareness.setLocalStateField('user', userToBroadcast);
 
           const ytext = ydoc.getText('monaco');
           if (ytext.length === 0 && (file.content || '').length > 0) {

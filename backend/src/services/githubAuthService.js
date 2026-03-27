@@ -30,7 +30,18 @@ const handleGitHubCallback = async (code, userId) => {
     headers: { Authorization: `token ${access_token}` }
   });
 
-  const { login, avatar_url } = userResponse.data;
+  const { login, avatar_url, email: githubEmail, name: githubName } = userResponse.data;
+
+  // Sync to core User model
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      username: login,
+      avatarUrl: avatar_url,
+      email: githubEmail || undefined,
+      name: githubName || undefined
+    }
+  });
 
   return await prisma.userGitHub.upsert({
     where: { userId },

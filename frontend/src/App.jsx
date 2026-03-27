@@ -52,6 +52,7 @@ export default function App() {
   const [showMetrics, setShowMetrics] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showAssets, setShowAssets] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [editorSettings, setEditorSettings] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('devcollab-editor-settings') || '{}');
@@ -138,6 +139,13 @@ export default function App() {
           setOpenedFileIds([firstId]);
         }
         setBanner('');
+        
+        try {
+          const profileRes = await api.get('/users/profile');
+          setCurrentUser(profileRes.data);
+        } catch (_e) {
+          console.warn('Failed to fetch user profile');
+        }
 
         await fetchGithubUser();
 
@@ -645,15 +653,17 @@ export default function App() {
             <div className="monaco-editor-wrapper" style={{ flex: 1, borderRadius: openedFileIds.length > 0 ? '0 0 12px 12px' : '12px', display: 'flex', flexDirection: 'column' }}>
               {activeFile ? (
                 <>
-                  <div style={{ padding: '6px 16px', fontSize: '0.75rem', color: 'var(--text-muted)', borderBottom: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-panel)' }}>
-                    <span>{project?.name || 'Project'}</span> <span style={{ opacity: 0.4 }}>/</span> <span style={{ color: 'var(--text-main)', fontWeight: 600 }}>{activeFile.name}</span>
-                  </div>
+                  <Breadcrumbs 
+                    projectName={project?.name || 'Loading...'} 
+                    fileName={activeFile.name} 
+                  />
                   <CodeEditor
                     key={`${activeFile.id}-${theme}`}
                     file={activeFile}
                     theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
                     readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
                     collaborationEnabled={collaborationEnabled}
+                    currentUser={currentUser}
                     onChange={(content) => {
                       const nextFiles = files.map(f => f.id === activeFile.id ? { ...f, content } : f);
                       setFiles(nextFiles);
@@ -708,6 +718,8 @@ export default function App() {
         <SettingsModal
           onClose={() => setShowSettings(false)}
           onSave={(newSettings) => setEditorSettings(newSettings)}
+          currentUser={currentUser}
+          onProfileUpdate={(updated) => setCurrentUser(updated)}
         />
       )}
       {showMetrics && (
