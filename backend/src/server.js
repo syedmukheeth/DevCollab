@@ -9,6 +9,7 @@ const connectDB = require('./config/db');
 const { parseEnv } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { requestLogger } = require('./middleware/requestLogger');
+const { initSentry, setupErrorHandlers } = require('./utils/sentry');
 const projectRoutes = require('./routes/projectRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const { createCollabServer } = require('./realtime/collabServer');
@@ -19,11 +20,13 @@ const metricsRoutes = require('./routes/metricsRoutes');
 const aiRoutes = require('./routes/aiRoutes');
 const storageRoutes = require('./routes/storageRoutes');
 const storageService = require('./services/storageService');
+const userRoutes = require('./routes/userRoutes');
 const { setupLspServer } = require('./services/lspManager');
 
 const env = parseEnv();
 
 const app = express();
+initSentry(app);
 
 app.use(
   cors({
@@ -88,8 +91,10 @@ app.use('/api/sessions', sessionRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/storage', storageRoutes);
+app.use('/api/users', userRoutes);
 
 app.use(notFound);
+setupErrorHandlers(app);
 app.use(errorHandler);
 
 let dbReady = false;
