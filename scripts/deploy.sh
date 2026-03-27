@@ -43,20 +43,17 @@ git branch -r | grep origin/main > /dev/null && git pull origin main || echo "Wo
 
 # 4. Prisma Database Migrations
 echo "🗄️ Starting temporary Postgres DB for Prisma migrations..."
-docker-compose -f docker-compose.prod.yml up -d db
-sleep 5 # wait for postgres to boot up
+docker-compose -f docker-compose.prod.yml up -d db redis minio
+sleep 8 # wait for services to boot
 
 # Apply migrations
 echo "⚙️ Running Prisma migrations to PostgreSQL..."
-# Doing it directly via a throwaway node container inside the network
-docker run --rm --network devcollab_net \
-  -v $(pwd)/backend:/app -w /app \
-  node:20-alpine \
-  sh -c "npm install && npx prisma migrate deploy"
+docker-compose -f docker-compose.prod.yml run --rm backend npx prisma migrate deploy
 
 # 5. Launch Cluster
-echo "🚢 Launching Docker Swarm / Compose Production Cluster..."
-docker-compose -f docker-compose.prod.yml up -d --build
+echo "🚢 Launching Backend Production Cluster (Oracle Cloud)..."
+# We exclude 'frontend' if it's being served by Vercel
+docker-compose -f docker-compose.prod.yml up -d --build backend redis db minio
 
 echo "🎉 Deployment Complete!"
 echo "Backend API & Socket Backplane running on port 4000."
