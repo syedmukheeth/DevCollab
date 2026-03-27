@@ -1,6 +1,23 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import * as Y from 'yjs';
 import { SocketIOProvider } from 'y-socket.io';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  Layout, 
+  BarChart3, 
+  Settings, 
+  Keyboard, 
+  Image as ImageIcon, 
+  Share2, 
+  Moon, 
+  Sun, 
+  LogOut, 
+  Github,
+  Zap,
+  Menu,
+  Box,
+  Play
+} from 'lucide-react';
 import { FileExplorer } from './components/FileExplorer.jsx';
 import { CodeEditor } from './components/CodeEditor.jsx';
 import { GitPanel } from './components/GitPanel.jsx';
@@ -59,6 +76,7 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState('explorer');
   const [currentUser, setCurrentUser] = useState(null);
+  const [theme, setTheme] = useState(() => window.localStorage.getItem('devcollab-theme') || 'dark');
   const [editorSettings, setEditorSettings] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('devcollab-editor-settings') || '{}');
@@ -72,9 +90,7 @@ export default function App() {
     try {
       const existing = window.localStorage.getItem('devcollab-user');
       if (existing) return JSON.parse(existing);
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
     const id = Math.random().toString(16).slice(2);
     const name = `User-${id.slice(0, 6)}`;
     const color = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
@@ -84,24 +100,19 @@ export default function App() {
   };
 
   const persistLocalWorkspace = (nextProject, nextFiles) => {
-    const workspace = {
-      project: nextProject,
-      files: nextFiles
-    };
+    const workspace = { project: nextProject, files: nextFiles };
     saveWorkspace(workspace);
   };
 
   const bootstrapLocalWorkspace = (message) => {
     const workspace = loadWorkspace() || createDefaultWorkspace();
     setMode('local');
-    setBanner(message || 'Running in local workspace mode. Changes are saved in your browser.');
+    setBanner(message || 'Running in local mode. Changes are saved in your browser.');
     setProject(workspace.project);
     setFiles(workspace.files);
     const firstId = workspace.files[0]?.id || null;
     setActiveFileId(firstId);
-    if (firstId && !openedFileIds.includes(firstId)) {
-      setOpenedFileIds([firstId]);
-    }
+    if (firstId) setOpenedFileIds([firstId]);
     const localUser = getOrCreateLocalUser();
     setPresenceStates([{ user: localUser, status: 'local', activeFile: firstId }]);
   };
@@ -111,11 +122,10 @@ export default function App() {
       try {
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');
-        
         if (tokenFromUrl) {
           window.localStorage.setItem('devcollab-token', tokenFromUrl);
           window.history.replaceState({}, document.title, window.location.pathname);
-          setShowLanding(false); // Skip landing if they just authed
+          setShowLanding(false);
         }
 
         const currentToken = window.localStorage.getItem('devcollab-token');
@@ -141,17 +151,13 @@ export default function App() {
         setFiles(nextFiles);
         const firstId = nextFiles[0]?.id || null;
         setActiveFileId(firstId);
-        if (firstId) {
-          setOpenedFileIds([firstId]);
-        }
+        if (firstId) setOpenedFileIds([firstId]);
         setBanner('');
         
         try {
           const profileRes = await api.get('/users/profile');
           setCurrentUser(profileRes.data);
-        } catch (_e) {
-          console.warn('Failed to fetch user profile');
-        }
+        } catch (_e) {}
 
         await fetchGithubUser();
 
@@ -161,13 +167,10 @@ export default function App() {
             const { data } = await api.post('/sessions/join', { shareLink });
             setSessionData(data.session);
             setSessionUser(data.sessionUser);
-          } catch (e) {
-            console.error('Failed to join session', e);
-          }
+          } catch (e) {}
         }
       } catch (err) {
-        console.error(err);
-        bootstrapLocalWorkspace('Backend unavailable. Switched to local workspace mode; your files will stay in this browser.');
+        bootstrapLocalWorkspace('Backend unavailable. Switched to local mode.');
       } finally {
         setIsInitializing(false);
       }
@@ -180,11 +183,9 @@ export default function App() {
       setGlobalProvider(null);
       return undefined;
     }
-
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
     const room = `project:${project.id}`;
     const token = window.localStorage.getItem('devcollab-token');
-
     const ydoc = new Y.Doc();
     const provider = new SocketIOProvider(socketUrl, room, ydoc, {
       auth: token ? { token } : {}
@@ -201,7 +202,6 @@ export default function App() {
     });
 
     setGlobalProvider(provider);
-
     return () => {
       provider.destroy();
       ydoc.destroy();
@@ -212,7 +212,6 @@ export default function App() {
     if (collaborationEnabled && globalProvider && activeFileId) {
       globalProvider.awareness.setLocalStateField('activeFile', activeFileId);
     }
-
     if (isLocalMode) {
       const localUser = getOrCreateLocalUser();
       setPresenceStates([{ user: localUser, status: 'local', activeFile: activeFileId }]);
@@ -220,21 +219,15 @@ export default function App() {
   }, [activeFileId, globalProvider, collaborationEnabled, isLocalMode]);
 
   useEffect(() => {
-    if (!globalProvider) return undefined;
+    if (!globalProvider?.socket) return undefined;
     const ioSocket = globalProvider.socket;
-    if (!ioSocket) return undefined;
-
-    const onOutput = (data) => {
-      setOutputLines((prev) => [...prev, data]);
-    };
+    const onOutput = (data) => setOutputLines((prev) => [...prev, data]);
     const onFinished = () => {
       setIsRunning(false);
       globalProvider.awareness.setLocalStateField('status', 'idle');
     };
-
     ioSocket.on('execution-output', onOutput);
     ioSocket.on('execution-finished', onFinished);
-
     return () => {
       ioSocket.off('execution-output', onOutput);
       ioSocket.off('execution-finished', onFinished);
@@ -277,7 +270,6 @@ export default function App() {
       persistLocalWorkspace(project, remaining);
       return;
     }
-
     await api.delete(`/files/${fileId}`);
     const refreshed = await handleRefreshFiles();
     setActiveFileId((current) => (current === fileId ? refreshed[0]?.id || null : current));
@@ -285,29 +277,13 @@ export default function App() {
 
   const handleRenameFile = async (fileId, newName) => {
     if (isLocalMode) {
-      const nextFiles = files.map((file) => (
-        file.id === fileId
-          ? { ...file, name: newName, updatedAt: new Date().toISOString() }
-          : file
-      ));
+      const nextFiles = files.map((f) => f.id === fileId ? { ...f, name: newName } : f);
       setFiles(nextFiles);
       persistLocalWorkspace(project, nextFiles);
       return;
     }
     await api.put(`/files/${fileId}`, { name: newName });
     await handleRefreshFiles();
-  };
-
-  const handleContentChange = async (fileId, content) => {
-    if (isLocalMode) {
-      const nextFiles = files.map((file) => (
-        file.id === fileId
-          ? { ...file, content, updatedAt: new Date().toISOString() }
-          : file
-      ));
-      setFiles(nextFiles);
-      persistLocalWorkspace(project, nextFiles);
-    }
   };
 
   const fetchGithubUser = async () => {
@@ -321,45 +297,24 @@ export default function App() {
 
   const handleConnectGitHub = async () => {
     if (isLocalMode) {
-      setGitStatus('GitHub integration is unavailable in local workspace mode.');
+      setGitStatus('GitHub integration is disabled in local mode.');
       return;
     }
     try {
       const { data } = await api.get('/github/auth');
-      const width = 600;
-      const height = 700;
-      const left = window.screen.width / 2 - width / 2;
-      const top = window.screen.height / 2 - height / 2;
-      window.open(data.url, 'GitHub Auth', `width=${width},height=${height},left=${left},top=${top}`);
+      window.location.href = data.url;
     } catch (e) {
       setGitStatus('Failed to start GitHub auth');
     }
   };
 
-  useEffect(() => {
-    const handleMessage = (e) => {
-      if (e.data === 'github-connected') {
-        fetchGithubUser();
-        setGitStatus('GitHub connected successfully!');
-      }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, []);
-
   const handleGitInit = async () => {
-    if (!project) return;
-    if (isLocalMode) {
-      setGitStatus('Initialize/link repository is disabled in local workspace mode.');
-      return;
-    }
+    if (!project || isLocalMode) return;
     setLoadingGitInit(true);
-    setGitStatus('');
     try {
       const res = await api.post(`/projects/${project.id}/github/init`, {});
-      setGitStatus(`Repo ready: ${res.data.owner}/${res.data.repo} (branch: ${res.data.defaultBranch})`);
+      setGitStatus(`Repo ready: ${res.data.owner}/${res.data.repo}`);
     } catch (err) {
-      console.error(err);
       setGitStatus(err?.response?.data?.message || 'GitHub init failed');
     } finally {
       setLoadingGitInit(false);
@@ -367,49 +322,17 @@ export default function App() {
   };
 
   const handleGitCommit = async () => {
-    if (!project) return;
-    if (isLocalMode) {
-      setGitStatus('Commit and push are unavailable without the backend.');
-      return;
-    }
+    if (!project || isLocalMode) return;
     setLoadingGitCommit(true);
-    setGitStatus('');
     try {
       const res = await api.post(`/projects/${project.id}/github/commit`, { branch: gitBranch, message: gitMessage });
-      setGitStatus(`Committed ${res.data.commitSha.slice(0, 7)} to ${res.data.branch}`);
+      setGitStatus(`Committed ${res.data.commitSha.slice(0, 7)}`);
     } catch (err) {
-      console.error(err);
       setGitStatus(err?.response?.data?.message || 'Commit failed');
     } finally {
       setLoadingGitCommit(false);
     }
   };
-
-  const handleGitPR = async () => {
-    if (!project) return;
-    if (isLocalMode) {
-      setGitStatus('Pull request creation is unavailable in local workspace mode.');
-      return;
-    }
-    setLoadingGitPR(true);
-    setGitStatus('');
-    try {
-      const res = await api.post(`/projects/${project.id}/github/create-pr`, {
-        head: gitBranch,
-        title: `PR from DevCollab: ${gitMessage}`,
-        body: 'Automated PR created from DevCollab IDE.'
-      });
-      setGitStatus(`Created PR #${res.data.number}: ${res.data.html_url}`);
-      window.open(res.data.html_url, '_blank');
-    } catch (err) {
-      console.error(err);
-      setGitStatus(err?.response?.data?.message || 'PR creation failed');
-    } finally {
-      setLoadingGitPR(false);
-    }
-  };
-
-  const [theme, setTheme] = useState(() => window.localStorage.getItem('devcollab-theme') || 'dark');
 
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
@@ -421,15 +344,11 @@ export default function App() {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  // Register keyboard shortcuts
   useEffect(() => {
     return registerShortcuts({
       'run-code': handleRunCode,
-      'save': () => {},
       'toggle-sidebar': () => setShowSidebar(p => !p),
-      'toggle-terminal': () => {},
       'toggle-theme': toggleTheme,
-      'new-file': () => {},
       'show-shortcuts': () => setShowShortcuts(p => !p),
       'command-palette': () => setShowCommandPalette(true)
     });
@@ -439,385 +358,149 @@ export default function App() {
     { id: 'run', label: 'Run Code', shortcut: 'Ctrl+R', run: () => handleRunCode() },
     { id: 'search', label: 'Search Files', shortcut: 'Ctrl+Shift+F', run: () => { setShowSidebar(true); setActiveSidebarTab('search'); } },
     { id: 'share', label: 'Share Project', run: () => setShowShare(true) },
-    { id: 'files', label: 'Show File Explorer', run: () => { setShowSidebar(true); setActiveSidebarTab('explorer'); } },
     { id: 'theme', label: 'Toggle Dark/Light Mode', shortcut: 'Ctrl+Shift+T', run: toggleTheme },
     { id: 'settings', label: 'Open Settings', run: () => setShowSettings(true) },
-    { id: 'shortcuts', label: 'Show Keybindings', run: () => setShowShortcuts(true) },
-    { id: 'assets', label: 'Project Assets', run: () => setShowAssets(true) },
-    { id: 'sidebar', label: 'Toggle Sidebar', shortcut: 'Ctrl+B', run: () => setShowSidebar(p => !p) },
-    { id: 'new-file', label: 'Create New File', run: () => {
-      const name = prompt('File name:');
-      if (name) handleCreateFile(name);
-    }}
+    { id: 'sidebar', label: 'Toggle Sidebar', shortcut: 'Ctrl+B', run: () => setShowSidebar(p => !p) }
   ];
 
-  const activeFile = useMemo(
-    () => files.find((f) => f.id === activeFileId) || null,
-    [files, activeFileId]
-  );
+  const activeFile = useMemo(() => files.find((f) => f.id === activeFileId) || null, [files, activeFileId]);
 
   const handleRunCode = () => {
     if (isLocalMode) {
-      setOutputLines([{ type: 'system', payload: 'Code execution requires the backend runner. Local mode supports editing and file management only.' }]);
-      setIsRunning(false);
+      setOutputLines([{ type: 'system', payload: 'Code execution requires the cloud runner.' }]);
       return;
     }
-
-    if (!globalProvider || !globalProvider.socket || !activeFile) {
-      if (!activeFile) setOutputLines([{ type: 'error', payload: 'No active file selected.' }]);
-      return;
-    }
-
+    if (!globalProvider?.socket || !activeFile) return;
     const ext = activeFile.name.split('.').pop().toLowerCase();
     const langMap = { py: 'python', js: 'javascript', ts: 'typescript', go: 'go', java: 'java' };
     const language = langMap[ext];
-
     if (!language) {
-      setOutputLines([{ type: 'error', payload: `Unsupported file extension for execution: .${ext}` }]);
+      setOutputLines([{ type: 'error', payload: 'Unsupported file type.' }]);
       return;
     }
-
     setOutputLines([]);
     setIsRunning(true);
     globalProvider.awareness.setLocalStateField('status', 'executing');
-
     globalProvider.socket.emit('execute-code', {
-      code: window.getEditorCode ? window.getEditorCode() : (activeFile.content || ''),
+      code: window.getEditorCode?.() || activeFile.content || '',
       language,
       fileId: activeFileId
     });
   };
 
   const handleSelectFile = (id) => {
-    if (!openedFileIds.includes(id)) {
-      setOpenedFileIds(prev => [...prev, id]);
-    }
+    if (!openedFileIds.includes(id)) setOpenedFileIds(prev => [...prev, id]);
     setActiveFileId(id);
   };
 
   const handleJumpToResult = (fileId, line) => {
     handleSelectFile(fileId);
-    // Use the globally exposed editor function
-    setTimeout(() => {
-      if (window.editorGoToLine) window.editorGoToLine(line);
-    }, 200);
+    setTimeout(() => window.editorGoToLine?.(line), 200);
   };
 
   const handleCloseTab = (e, id) => {
     e.stopPropagation();
-    const newOpened = openedFileIds.filter(fId => fId !== id);
-    setOpenedFileIds(newOpened);
-    if (activeFileId === id) {
-      setActiveFileId(newOpened.length > 0 ? newOpened[newOpened.length - 1] : null);
-    }
+    const nextOpened = openedFileIds.filter(fId => fId !== id);
+    setOpenedFileIds(nextOpened);
+    if (activeFileId === id) setActiveFileId(nextOpened.length > 0 ? nextOpened[nextOpened.length - 1] : null);
   };
 
-  const handleOpenHistory = () => {
-    if (!activeFile) return;
-    if (isLocalMode) {
-      setGitStatus('Change history replay requires the backend event log.');
-      return;
-    }
-    setPlaybackFile(activeFile);
-  };
-
-  const handleOpenDiff = () => {
-    if (!activeFile) return;
-    if (isLocalMode) {
-      setGitStatus('Git diff is unavailable in local workspace mode.');
-      return;
-    }
-    setDiffFile(activeFile);
-  };
-
-  if (showLanding) {
-    return <LandingPage onEnter={() => setShowLanding(false)} />;
-  }
+  if (showLanding) return <LandingPage onEnter={() => setShowLanding(false)} />;
 
   return (
     <div className="app-root">
       <header className="app-header">
         <div className="app-header-left">
-          <div className="app-title">
-             <span style={{ fontSize: '1.5rem' }}>💠</span> DevCollab
-          </div>
+          <div className="app-title"><Box size={22} className="text-blue-500" /> DevCollab</div>
           <div className="app-subtitle">
-            {project ? project.name : 'Initializing project...'}
-            {isLocalMode ? ' • Local mode' : ' • Cloud mode'}
+            {project?.name || 'Loading...'}
+            <span style={{ opacity: 0.3, margin: '0 8px' }}>|</span>
+            {isLocalMode ? 'Local Node' : 'Cloud Cluster'}
           </div>
         </div>
-        <div className="app-header-right" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {collaborationEnabled && (
-            <MeetingPanel 
-              socket={globalProvider?.socket} 
-              roomId={project?.id || sessionData?.id} 
-              currentUser={sessionUser} 
-            />
-          )}
-          <button onClick={() => setShowSidebar(p => !p)} className="morphic-button" title="Toggle Sidebar (Ctrl+B)" style={{ fontSize: '1rem', padding: '4px 8px' }}>☰</button>
-          <button onClick={() => setShowMetrics(true)} className="morphic-button" title="System Metrics" style={{ fontSize: '1rem', padding: '4px 8px' }}>📊</button>
-          <button onClick={() => setShowSettings(true)} className="morphic-button" title="Settings" style={{ fontSize: '1rem', padding: '4px 8px' }}>⚙️</button>
-          <button onClick={() => setShowShortcuts(true)} className="morphic-button" title="Keyboard Shortcuts" style={{ fontSize: '1rem', padding: '4px 8px' }}>⌨️</button>
-          <button onClick={() => setShowAssets(true)} className="morphic-button" title="Project Assets" style={{ fontSize: '1rem', padding: '4px 8px' }}>🖼️</button>
-          <button onClick={() => setShowShare(true)} className="morphic-button" title="Share Project" style={{ fontSize: '1rem', padding: '4px 8px', background: 'var(--accent)', color: 'white' }}>Share</button>
-          <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme (Ctrl+Shift+T)">
-            {theme === 'dark' ? '☀️' : '🌙'}
-          </button>
-          {sessionData?.interviewMode && (
-            <InterviewTimer expiresAt={sessionData.expiresAt} onExpire={() => alert('Interview time ended!')} />
-          )}
-          {sessionData && sessionData.createdBy && sessionData.createdBy === sessionUser?.userId && sessionUser?.role === 'INTERVIEWER' && (
-            <button
-              onClick={async () => {
-                await api.post(`/sessions/${sessionData.id}/end`);
-                window.location.reload();
-              }}
-              className="morphic-button"
-              style={{ background: '#ef4444', color: 'white' }}
-            >
-              End Interview
-            </button>
-          )}
+        <div className="app-header-right" style={{ display: 'flex', gap: '0.5rem' }}>
+          {collaborationEnabled && <MeetingPanel socket={globalProvider?.socket} roomId={project?.id} currentUser={sessionUser} />}
+          <button onClick={() => setShowSidebar(!showSidebar)} className="morphic-button" title="Toggle Sidebar"><Menu size={18} /></button>
+          <button onClick={() => setShowMetrics(true)} className="morphic-button" title="Metrics"><BarChart3 size={18} /></button>
+          <button onClick={() => setShowSettings(true)} className="morphic-button" title="Settings"><Settings size={18} /></button>
+          <button onClick={() => setShowShortcuts(true)} className="morphic-button" title="Shortcuts"><Keyboard size={18} /></button>
+          <button onClick={() => setShowAssets(true)} className="morphic-button" title="Assets"><ImageIcon size={18} /></button>
+          <button onClick={() => setShowShare(true)} className="morphic-button primary" title="Share"><Share2 size={16} /> Share</button>
+          <button onClick={toggleTheme} className="theme-toggle">{theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}</button>
           {githubUser ? (
-             <img src={githubUser.avatarUrl} alt="GitHub" title={githubUser.username} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--accent)' }} />
+            <img src={githubUser.avatarUrl} alt="Avatar" style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--accent)' }} />
           ) : (
-            <button onClick={() => {
-              api.get('/auth/github').then(res => window.location.href = res.data.url).catch(e => console.error(e));
-            }} className="morphic-button" style={{ padding: '6px 14px', fontSize: '0.85rem' }}>
-              Connect GitHub
-            </button>
+            <button onClick={handleConnectGitHub} className="morphic-button"><Github size={16} /> Connect</button>
           )}
           <PresenceBar users={presenceStates} />
         </div>
       </header>
-      {banner ? <div className="banner-glass">{banner}</div> : null}
-      <div className="app-body">
+      
+      {banner && <div className="banner-glass"><Zap size={14} style={{ marginRight: 8 }} /> {banner}</div>}
+      
+      <motion.div initial={{ opacity: 0, scale: 0.99 }} animate={{ opacity: 1, scale: 1 }} className="app-body">
         {showSidebar && (
-        <aside className="sidebar glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="sidebar-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--border-glass)', background: 'var(--bg-panel)' }}>
-            <button 
-              onClick={() => setActiveSidebarTab('explorer')}
-              style={{ flex: 1, padding: '10px', background: activeSidebarTab === 'explorer' ? 'transparent' : 'rgba(0,0,0,0.1)', color: activeSidebarTab === 'explorer' ? 'var(--accent)' : 'var(--text-muted)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
-            >FILES</button>
-            <button 
-              onClick={() => setActiveSidebarTab('search')}
-              style={{ flex: 1, padding: '10px', background: activeSidebarTab === 'search' ? 'transparent' : 'rgba(0,0,0,0.1)', color: activeSidebarTab === 'search' ? 'var(--accent)' : 'var(--text-muted)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
-            >SEARCH</button>
-          </div>
-          
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {activeSidebarTab === 'explorer' ? (
-              <FileExplorer
-                files={files}
-                activeFileId={activeFileId}
-                onSelectFile={handleSelectFile}
-                onCreateFile={handleCreateFile}
-                onDeleteFile={handleDeleteFile}
-                onRenameFile={handleRenameFile}
-                disabled={isInitializing || !project}
-                presenceStates={presenceStates}
-              />
-            ) : (
-              <SearchPanel 
-                projectId={project?.id} 
-                onSelectResult={handleJumpToResult} 
-              />
-            )}
-          </div>
-          <SessionPanel projectId={project?.id} />
-        </aside>
-        )}
-        <main className="editor-main-container">
-          <div className="git-panel-wrapper glass-panel" style={{ padding: '0.5rem' }}>
-            <GitPanel
-              disabled={!project}
-              branch={gitBranch}
-              setBranch={setGitBranch}
-              message={gitMessage}
-              setMessage={setGitMessage}
-              status={gitStatus}
-              onInit={handleGitInit}
-              onCommit={handleGitCommit}
-              loadingInit={loadingGitInit}
-              loadingCommit={loadingGitCommit}
-              loadingPR={loadingGitPR}
-              onPR={handleGitPR}
-              githubUser={githubUser}
-              onConnect={handleConnectGitHub}
-            />
-          </div>
-          <div className="editor-workspace" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
-            {activeFileId && (
-              <Breadcrumbs 
-                projectName={project?.name || 'Loading...'} 
-                fileName={files.find(f => f.id === activeFileId)?.name} 
-              />
-            )}
-            {openedFileIds.length > 0 && (
-              <div className="tabs-bar" style={{ display: 'flex', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border-glass)', overflowX: 'auto' }}>
-                {openedFileIds.map(id => {
-                  const f = files.find(file => file.id === id);
-                  if (!f) return null;
-                  const isActive = activeFileId === id;
-                  return (
-                    <div
-                      key={id}
-                      onClick={() => handleSelectFile(id)}
-                      style={{
-                        padding: '8px 16px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        background: isActive ? 'var(--bg-main)' : 'transparent',
-                        borderRight: '1px solid var(--border-glass)',
-                        borderTop: isActive ? '2px solid var(--accent)' : '2px solid transparent',
-                        fontSize: '0.85rem',
-                        fontWeight: isActive ? 600 : 400,
-                        color: isActive ? 'var(--text-main)' : 'var(--text-muted)'
-                      }}
-                    >
-                      {f.name}
-                      <button
-                        onClick={(e) => handleCloseTab(e, id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: 'var(--text-muted)',
-                          cursor: 'pointer',
-                          fontSize: '1rem',
-                          lineHeight: 1,
-                          padding: '0 2px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: '4px'
-                        }}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            
-            <div className="monaco-editor-wrapper" style={{ flex: 1, borderRadius: openedFileIds.length > 0 ? '0 0 12px 12px' : '12px', display: 'flex', flexDirection: 'column' }}>
-              {activeFile ? (
-                <>
-                  <Breadcrumbs 
-                    projectName={project?.name || 'Loading...'} 
-                    fileName={activeFile.name} 
-                  />
-                  <CodeEditor
-                    key={`${activeFile.id}-${theme}`}
-                    file={activeFile}
-                    theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
-                    readOnly={isInitializing || (sessionData?.interviewMode && sessionUser?.role === 'VIEWER')}
-                    collaborationEnabled={collaborationEnabled}
-                    currentUser={currentUser}
-                    onChange={(content) => {
-                      const nextFiles = files.map(f => f.id === activeFile.id ? { ...f, content } : f);
-                      setFiles(nextFiles);
-                      if (isLocalMode) persistLocalWorkspace(project, nextFiles);
-                    }}
-                    editorSettings={editorSettings}
-                  />
-                </>
+          <aside className="sidebar glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="sidebar-tabs">
+              <button className={`sidebar-tab ${activeSidebarTab === 'explorer' ? 'active' : ''}`} onClick={() => setActiveSidebarTab('explorer')}>
+                <Layout size={16} style={{ marginBottom: 4 }} /><div>FILES</div>
+              </button>
+              <button className={`sidebar-tab ${activeSidebarTab === 'search' ? 'active' : ''}`} onClick={() => setActiveSidebarTab('search')}>
+                <BarChart3 size={16} style={{ marginBottom: 4 }} /><div>SEARCH</div>
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {activeSidebarTab === 'explorer' ? (
+                <FileExplorer files={files} activeFileId={activeFileId} onSelectFile={handleSelectFile} onCreateFile={handleCreateFile} onDeleteFile={handleDeleteFile} onRenameFile={handleRenameFile} disabled={isInitializing} />
               ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-                  No file open. Select a file from the explorer.
-                </div>
+                <SearchPanel projectId={project?.id} onSelectResult={handleJumpToResult} />
               )}
             </div>
+            <SessionPanel projectId={project?.id} />
+          </aside>
+        )}
+
+        <main className="editor-main-container">
+          <div className="git-panel-wrapper glass-panel" style={{ padding: '0.5rem' }}>
+            <GitPanel disabled={!project} branch={gitBranch} setBranch={setGitBranch} message={gitMessage} setMessage={setGitMessage} status={gitStatus} onInit={handleGitInit} onCommit={handleGitCommit} loadingInit={loadingGitInit} loadingCommit={loadingGitCommit} loadingPR={loadingGitPR} onPR={() => {}} githubUser={githubUser} onConnect={handleConnectGitHub} />
+          </div>
+          
+          <div className="editor-workspace" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            {activeFileId && <Breadcrumbs projectName={project?.name} fileName={files.find(f => f.id === activeFileId)?.name} />}
+            <div className="monaco-editor-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+              {activeFile ? (
+                <CodeEditor file={activeFile} theme={theme === 'dark' ? 'vs-dark' : 'vs-light'} collaborationEnabled={collaborationEnabled} currentUser={currentUser} onChange={(content) => {
+                  const nextFiles = files.map(f => f.id === activeFile.id ? { ...f, content } : f);
+                  setFiles(nextFiles);
+                  if (isLocalMode) persistLocalWorkspace(project, nextFiles);
+                }} editorSettings={editorSettings} />
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-dim)' }}>Select a file to begin.</div>
+              )}
+            </div>
+            
             <div style={{ height: '30%', marginTop: '1rem', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '0.4rem 0.8rem', gap: '0.5rem' }}>
-                <button onClick={handleOpenDiff} className="morphic-button">
-                  Diff 📂
-                </button>
-                <button onClick={handleOpenHistory} className="morphic-button">
-                  History 🕒
-                </button>
-                <button onClick={handleRunCode} disabled={isRunning} className="morphic-button primary">
-                  {isRunning ? 'Running...' : 'Run ▶'}
-                </button>
+                <button onClick={handleRunCode} disabled={isRunning} className="morphic-button primary">{isRunning ? 'Running...' : 'Run'} <Play size={14} style={{ marginLeft: 6 }} /></button>
               </div>
-              <div style={{ flex: 1, marginTop: '0.5rem', display: 'flex', flexDirection: 'column', background: 'var(--bg-panel)', borderRadius: '12px', overflow: 'hidden' }}>
-                <div style={{ padding: '0.3rem 0.8rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Terminal</div>
-                <div className="terminal-wrapper" style={{ flex: 1, margin: 0, padding: 0, borderRadius: 0, border: 'none', borderTop: '1px solid var(--border-glass)', background: '#1e1e1e' }}>
-                  <TerminalPanel socket={globalProvider?.socket} sessionId={sessionData?.id || project?.id} />
-                </div>
+              <div className="terminal-wrapper" style={{ flex: 1, background: '#0f172a', borderRadius: '12px' }}>
+                <TerminalPanel socket={globalProvider?.socket} sessionId={project?.id} />
               </div>
             </div>
           </div>
         </main>
-      </div>
-      {playbackFile && (
-        <PlaybackModal
-          room={`file:${playbackFile.id}`}
-          filename={playbackFile.name}
-          onClose={() => setPlaybackFile(null)}
-        />
-      )}
-      {diffFile && (
-        <DiffModal
-          projectId={project?.id}
-          file={diffFile}
-          onClose={() => setDiffFile(null)}
-        />
-      )}
-      {showSettings && (
-        <SettingsModal
-          onClose={() => setShowSettings(false)}
-          onSave={(newSettings) => setEditorSettings(newSettings)}
-          currentUser={currentUser}
-          onProfileUpdate={(updated) => setCurrentUser(updated)}
-        />
-      )}
-      {showMetrics && (
-        <div className="playback-modal-overlay" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999 }}>
-          <div className="glass-panel" style={{ width: '480px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <div style={{ padding: '1rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-glass)' }}>
-              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800 }}>📊 System Telemetry</h3>
-              <button className="morphic-button" onClick={() => setShowMetrics(false)} style={{ borderRadius: '50%', width: '32px', height: '32px', justifyContent: 'center', fontSize: '1.2rem' }}>×</button>
-            </div>
-            <MetricsPanel />
-          </div>
-        </div>
-      )}
-      {showShortcuts && (
-        <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />
-      )}
-      {showAssets && project && (
-        <AssetGallery projectId={project.id} onClose={() => setShowAssets(false)} />
-      )}
-            <CopilotPanel 
-            disabled={isInitializing || !project} 
-            projectId={project?.id}
-            fileId={activeFileId}
-          />
+      </motion.div>
+
+      <CopilotPanel disabled={!project} projectId={project?.id} fileId={activeFileId} />
+      <CommandPalette isOpen={showCommandPalette} onClose={() => setShowCommandPalette(false)} actions={paletteActions} />
       
-      {showShare && project && (
-        <ShareModal projectId={project.id} onClose={() => setShowShare(false)} />
-      )}
-
-      <CommandPalette 
-        isOpen={showCommandPalette} 
-        onClose={() => setShowCommandPalette(false)} 
-        actions={paletteActions} 
-      />
-
-      <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0', zIndex: 10000, position: 'relative' }}>
-        <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>
-          Built with ❤️ by <a 
-            href="https://www.linkedin.com/in/syedmukheeth" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 800, borderBottom: '2px solid var(--accent)' }}
-          >
-            Syed Mukheeth
-          </a>
-        </div>
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onSave={setEditorSettings} currentUser={currentUser} onProfileUpdate={setCurrentUser} />}
+      {showShortcuts && <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />}
+      {showAssets && project && <AssetGallery projectId={project.id} onClose={() => setShowAssets(false)} />}
+      {showShare && project && <ShareModal projectId={project.id} onClose={() => setShowShare(false)} />}
+      
+      <footer className="glass-panel" style={{ padding: '0.6rem', textAlign: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0' }}>
+        Built with ❤️ by Syed Mukheeth
       </footer>
     </div>
   );
