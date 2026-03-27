@@ -44,57 +44,82 @@ export function CommandPalette({ isOpen, onClose, actions }) {
       onClick={onClose}
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)',
+        backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
         display: 'flex', justifyContent: 'center', paddingTop: '15vh',
-        zIndex: 200000
+        zIndex: 200000,
+        animation: 'paletteFadeIn 0.2s ease-out'
       }}
     >
+      <style>{`
+        @keyframes paletteFadeIn {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
       <div 
         className="glass-panel"
         onClick={e => e.stopPropagation()}
         style={{
-          width: '600px', maxHeight: '400px', display: 'flex', flexDirection: 'column',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid var(--border-glass)'
+          width: '640px', maxHeight: '450px', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 30px 90px rgba(0,0,0,0.7)', border: '1px solid var(--border-glass)',
+          background: 'rgba(20, 20, 25, 0.95)', borderRadius: '12px', overflow: 'hidden'
         }}
       >
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-glass)' }}>
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-glass)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ opacity: 0.5, fontSize: '1.2rem' }}>🔍</span>
           <input
             ref={inputRef}
             type="text"
             className="git-input"
-            style={{ width: '100%', fontSize: '1.1rem', padding: '8px' }}
-            placeholder="Type a command or search action..."
+            style={{ width: '100%', fontSize: '1.2rem', padding: '10px 0', background: 'transparent', border: 'none', color: 'var(--text-primary)', outline: 'none' }}
+            placeholder="Search commands (e.g. 'Run', 'Share', 'Theme')..."
             value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
           />
         </div>
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px' }}>
           {filteredActions.map((action, i) => (
             <div
               key={action.id}
               onClick={() => { action.run(); onClose(); }}
               onMouseEnter={() => setSelectedIndex(i)}
               style={{
-                padding: '12px 16px', cursor: 'pointer',
-                background: i === selectedIndex ? 'var(--accent)' : 'transparent',
-                color: i === selectedIndex ? '#fff' : 'var(--text-primary)',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                padding: '12px 16px', cursor: 'pointer', borderRadius: '8px',
+                background: i === selectedIndex ? 'rgba(255,255,255,0.1)' : 'transparent',
+                color: i === selectedIndex ? 'var(--accent)' : 'var(--text-primary)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                transition: 'all 0.1s ease', transform: i === selectedIndex ? 'translateX(4px)' : 'none'
               }}
             >
-              <div style={{ fontWeight: 600 }}>{action.label}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '1.1rem', filter: i === selectedIndex ? 'none' : 'grayscale(1)' }}>
+                  {action.id === 'run' ? '▶️' : action.id === 'share' ? '🔗' : '⚙️'}
+                </span>
+                <span style={{ fontWeight: i === selectedIndex ? 700 : 500 }}>{action.label}</span>
+              </div>
               {action.shortcut && (
-                <div style={{ fontSize: '0.75rem', opacity: 0.7, background: 'rgba(0,0,0,0.2)', padding: '2px 6px', borderRadius: '4px' }}>
+                <div style={{ 
+                  fontSize: '0.7rem', opacity: 0.8, background: 'rgba(255,255,255,0.05)', 
+                  padding: '4px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)',
+                  fontFamily: 'monospace', color: 'var(--text-muted)'
+                }}>
                   {action.shortcut}
                 </div>
               )}
             </div>
           ))}
           {filteredActions.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No commands matching "{query}"
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ fontSize: '2rem' }}>🤔</div>
+              <div>No commands matching "{query}"</div>
             </div>
           )}
+        </div>
+        <div style={{ padding: '10px 20px', background: 'rgba(0,0,0,0.2)', borderTop: '1px solid var(--border-glass)', display: 'flex', gap: '20px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+          <span><kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '3px' }}>↑↓</kbd> to navigate</span>
+          <span><kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '3px' }}>Enter</kbd> to select</span>
+          <span><kbd style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 4px', borderRadius: '3px' }}>Esc</kbd> to dismiss</span>
         </div>
       </div>
     </div>

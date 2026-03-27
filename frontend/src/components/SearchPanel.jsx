@@ -77,19 +77,39 @@ export function SearchPanel({ projectId, onSelectResult }) {
             className="search-result-item" 
             onClick={() => onSelectResult(res.fileId, res.line)}
             style={{ 
-              padding: '8px', 
-              borderRadius: '6px', 
+              padding: '10px 12px', 
+              borderRadius: '8px', 
               cursor: 'pointer', 
-              marginBottom: '6px',
+              marginBottom: '8px',
               border: '1px solid transparent',
-              transition: 'all 0.2s'
+              background: 'rgba(255,255,255,0.02)',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
-            onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-panel)'; e.currentTarget.style.borderColor = 'var(--border-glass)'; }}
-            onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; }}
+            onMouseOver={(e) => { 
+              e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; 
+              e.currentTarget.style.borderColor = 'var(--border-glass)';
+              e.currentTarget.style.transform = 'translateY(-1px)';
+            }}
+            onMouseOut={(e) => { 
+              e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; 
+              e.currentTarget.style.borderColor = 'transparent'; 
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
           >
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-main)', fontWeight: 600, display: 'flex', justifyContent: 'space-between' }}>
-              <span>{res.fileName}</span>
-              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>line {res.line}</span>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1rem' }}>📄</span>
+                {res.fileName}
+              </span>
+              <span style={{ 
+                fontSize: '0.65rem', 
+                color: 'var(--accent)', 
+                background: 'rgba(52, 152, 219, 0.1)', 
+                padding: '2px 8px', 
+                borderRadius: '12px',
+                fontWeight: 700,
+                border: '1px solid rgba(52, 152, 219, 0.2)'
+              }}>LINE {res.line}</span>
             </div>
             <div style={{ 
               fontSize: '0.75rem', 
@@ -98,11 +118,12 @@ export function SearchPanel({ projectId, onSelectResult }) {
               textOverflow: 'ellipsis', 
               whiteSpace: 'nowrap',
               fontFamily: 'monospace',
-              marginTop: '4px',
-              paddingLeft: '8px',
-              borderLeft: '2px solid var(--accent)'
+              marginTop: '6px',
+              paddingLeft: '10px',
+              borderLeft: '2.5px solid var(--accent)',
+              opacity: 0.8
             }}>
-              {res.content}
+              {res.content.trim()}
             </div>
           </div>
         ))}
