@@ -22,6 +22,7 @@ const storageRoutes = require('./routes/storageRoutes');
 const storageService = require('./services/storageService');
 const userRoutes = require('./routes/userRoutes');
 const searchRoutes = require('./routes/searchRoutes');
+const accessRoutes = require('./routes/accessRoutes');
 const { setupLspServer } = require('./services/lspManager');
 
 const env = parseEnv();
@@ -94,6 +95,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/storage', storageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', searchRoutes);
+app.use('/api/projects', accessRoutes);
 
 app.use(notFound);
 setupErrorHandlers(app);

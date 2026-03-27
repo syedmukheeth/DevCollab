@@ -17,9 +17,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  projects  Project[]
-  sessions  SessionUser[]
-  github    UserGitHub?
+  projects       Project[]
+  projectAccess  ProjectAccess[]
+  sessions       SessionUser[]
+  github         UserGitHub?
 }
 
 model UserGitHub {
@@ -45,9 +46,10 @@ model Project {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  owner       User?    @relation(fields: [ownerId], references: [id])
-  files       File[]
-  sessions    Session[]
+  owner         User?    @relation(fields: [ownerId], references: [id])
+  access        ProjectAccess[]
+  files         File[]
+  sessions      Session[]
 
   githubOwner         String?
   githubRepo          String?
@@ -114,5 +116,25 @@ model YjsUpdate {
   createdAt DateTime @default(now())
 
   @@index([room, createdAt])
+}
+
+enum ProjectRole {
+  VIEWER
+  EDITOR
+  ADMIN
+}
+
+model ProjectAccess {
+  id        String      @id @default(uuid())
+  projectId String
+  userId    String
+  role      ProjectRole @default(VIEWER)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
 }
 
