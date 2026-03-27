@@ -11,6 +11,7 @@ const SHORTCUTS = [
   { keys: 'Ctrl+Shift+T', action: 'toggle-theme', label: 'Toggle Theme' },
   { keys: 'Ctrl+N', action: 'new-file', label: 'New File' },
   { keys: 'Ctrl+Shift+?', action: 'show-shortcuts', label: 'Show Shortcuts' },
+  { keys: 'Ctrl+Shift+P', action: 'command-palette', label: 'Command Palette' },
 ];
 
 /**

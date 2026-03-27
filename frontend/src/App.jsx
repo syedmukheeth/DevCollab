@@ -18,6 +18,7 @@ import { CopilotPanel } from './components/CopilotPanel.jsx';
 import AssetGallery from './components/AssetGallery.jsx';
 import { SearchPanel } from './components/SearchPanel.jsx';
 import { ShareModal } from './components/ShareModal.jsx';
+import { CommandPalette } from './components/CommandPalette.jsx';
 import { Breadcrumbs } from './components/Breadcrumbs.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
@@ -55,6 +56,7 @@ export default function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showAssets, setShowAssets] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState('explorer');
   const [currentUser, setCurrentUser] = useState(null);
   const [editorSettings, setEditorSettings] = useState(() => {
@@ -428,9 +430,26 @@ export default function App() {
       'toggle-terminal': () => {},
       'toggle-theme': toggleTheme,
       'new-file': () => {},
-      'show-shortcuts': () => setShowShortcuts(p => !p)
+      'show-shortcuts': () => setShowShortcuts(p => !p),
+      'command-palette': () => setShowCommandPalette(true)
     });
   });
+
+  const paletteActions = [
+    { id: 'run', label: 'Run Code', shortcut: 'Ctrl+R', run: () => handleRunCode() },
+    { id: 'search', label: 'Search Files', shortcut: 'Ctrl+Shift+F', run: () => { setShowSidebar(true); setActiveSidebarTab('search'); } },
+    { id: 'share', label: 'Share Project', run: () => setShowShare(true) },
+    { id: 'files', label: 'Show File Explorer', run: () => { setShowSidebar(true); setActiveSidebarTab('explorer'); } },
+    { id: 'theme', label: 'Toggle Dark/Light Mode', shortcut: 'Ctrl+Shift+T', run: toggleTheme },
+    { id: 'settings', label: 'Open Settings', run: () => setShowSettings(true) },
+    { id: 'shortcuts', label: 'Show Keybindings', run: () => setShowShortcuts(true) },
+    { id: 'assets', label: 'Project Assets', run: () => setShowAssets(true) },
+    { id: 'sidebar', label: 'Toggle Sidebar', shortcut: 'Ctrl+B', run: () => setShowSidebar(p => !p) },
+    { id: 'new-file', label: 'Create New File', run: () => {
+      const name = prompt('File name:');
+      if (name) handleCreateFile(name);
+    }}
+  ];
 
   const activeFile = useMemo(
     () => files.find((f) => f.id === activeFileId) || null,
@@ -781,6 +800,12 @@ export default function App() {
       {showShare && project && (
         <ShareModal projectId={project.id} onClose={() => setShowShare(false)} />
       )}
+
+      <CommandPalette 
+        isOpen={showCommandPalette} 
+        onClose={() => setShowCommandPalette(false)} 
+        actions={paletteActions} 
+      />
 
       <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0', zIndex: 10000, position: 'relative' }}>
         <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>

@@ -1,6 +1,7 @@
 const { prisma } = require('../config/db');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
+const { cache } = require('../utils/redisClient');
 
 /**
  * Creates a new project in the database.
@@ -82,10 +83,18 @@ const getProjectFiles = async (projectId) => {
  */
 const getProjectFilesForOwner = async (projectId, ownerId) => {
   await getProjectByIdForOwner(projectId, ownerId);
-  return await prisma.file.findMany({
+  
+  const cacheKey = `project:${projectId}:files`;
+  const cached = await cache.get(cacheKey);
+  if (cached) return cached;
+
+  const files = await prisma.file.findMany({
     where: { projectId },
     orderBy: { createdAt: 'asc' }
   });
+  
+  await cache.set(cacheKey, files, 600); // 10 min cache
+  return files;
 };
 
 module.exports = {
