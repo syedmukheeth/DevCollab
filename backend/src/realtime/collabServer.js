@@ -29,7 +29,13 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
             }
           : undefined
       });
+      pubClient.on('error', (err) => {
+        console.warn('🔴 Redis Pub Client Error:', err.message);
+      });
       const subClient = pubClient.duplicate();
+      subClient.on('error', (err) => {
+        console.warn('🔴 Redis Sub Client Error:', err.message);
+      });
       await pubClient.connect();
       await subClient.connect();
       io.adapter(createAdapter(pubClient, subClient));
