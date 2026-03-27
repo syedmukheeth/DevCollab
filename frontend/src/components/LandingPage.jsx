@@ -1,17 +1,16 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
+  Box, 
+  Code, 
   Users, 
+  Zap, 
   Terminal, 
-  Github, 
-  ShieldCheck, 
-  History, 
-  UserPlus, 
+  Globe, 
+  Shield, 
   Cpu, 
-  Globe,
-  ArrowRight,
-  Code2,
-  Sparkles
+  Cloud,
+  ChevronRight,
+  Github
 } from 'lucide-react';
 
 const FEATURES = [
