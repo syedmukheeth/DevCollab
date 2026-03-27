@@ -16,6 +16,7 @@ import { TerminalPanel } from './components/TerminalPanel.jsx';
 import { MeetingPanel } from './components/MeetingPanel.jsx';
 import { CopilotPanel } from './components/CopilotPanel.jsx';
 import AssetGallery from './components/AssetGallery.jsx';
+import { Breadcrumbs } from './components/Breadcrumbs.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
@@ -586,6 +587,12 @@ export default function App() {
             />
           </div>
           <div className="editor-workspace" style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, position: 'relative' }}>
+            {activeFileId && (
+              <Breadcrumbs 
+                projectName={project?.name || 'Loading...'} 
+                fileName={files.find(f => f.id === activeFileId)?.name} 
+              />
+            )}
             {openedFileIds.length > 0 && (
               <div className="tabs-bar" style={{ display: 'flex', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border-glass)', overflowX: 'auto' }}>
                 {openedFileIds.map(id => {
