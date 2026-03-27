@@ -16,6 +16,7 @@ import { TerminalPanel } from './components/TerminalPanel.jsx';
 import { MeetingPanel } from './components/MeetingPanel.jsx';
 import { CopilotPanel } from './components/CopilotPanel.jsx';
 import AssetGallery from './components/AssetGallery.jsx';
+import { SearchPanel } from './components/SearchPanel.jsx';
 import { Breadcrumbs } from './components/Breadcrumbs.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
@@ -52,6 +53,7 @@ export default function App() {
   const [showMetrics, setShowMetrics] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showAssets, setShowAssets] = useState(false);
+  const [activeSidebarTab, setActiveSidebarTab] = useState('explorer');
   const [currentUser, setCurrentUser] = useState(null);
   const [editorSettings, setEditorSettings] = useState(() => {
     try {
@@ -472,6 +474,14 @@ export default function App() {
     setActiveFileId(id);
   };
 
+  const handleJumpToResult = (fileId, line) => {
+    handleSelectFile(fileId);
+    // Use the globally exposed editor function
+    setTimeout(() => {
+      if (window.editorGoToLine) window.editorGoToLine(line);
+    }, 200);
+  };
+
   const handleCloseTab = (e, id) => {
     e.stopPropagation();
     const newOpened = openedFileIds.filter(fId => fId !== id);
@@ -561,17 +571,37 @@ export default function App() {
       {banner ? <div className="banner-glass">{banner}</div> : null}
       <div className="app-body">
         {showSidebar && (
-        <aside className="sidebar glass-panel">
-          <FileExplorer
-            files={files}
-            activeFileId={activeFileId}
-            onSelectFile={handleSelectFile}
-            onCreateFile={handleCreateFile}
-            onDeleteFile={handleDeleteFile}
-            onRenameFile={handleRenameFile}
-            disabled={isInitializing || !project}
-            presenceStates={presenceStates}
-          />
+        <aside className="sidebar glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+          <div className="sidebar-tabs" style={{ display: 'flex', borderBottom: '1px solid var(--border-glass)', background: 'var(--bg-panel)' }}>
+            <button 
+              onClick={() => setActiveSidebarTab('explorer')}
+              style={{ flex: 1, padding: '10px', background: activeSidebarTab === 'explorer' ? 'transparent' : 'rgba(0,0,0,0.1)', color: activeSidebarTab === 'explorer' ? 'var(--accent)' : 'var(--text-muted)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
+            >FILES</button>
+            <button 
+              onClick={() => setActiveSidebarTab('search')}
+              style={{ flex: 1, padding: '10px', background: activeSidebarTab === 'search' ? 'transparent' : 'rgba(0,0,0,0.1)', color: activeSidebarTab === 'search' ? 'var(--accent)' : 'var(--text-muted)', border: 'none', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
+            >SEARCH</button>
+          </div>
+          
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {activeSidebarTab === 'explorer' ? (
+              <FileExplorer
+                files={files}
+                activeFileId={activeFileId}
+                onSelectFile={handleSelectFile}
+                onCreateFile={handleCreateFile}
+                onDeleteFile={handleDeleteFile}
+                onRenameFile={handleRenameFile}
+                disabled={isInitializing || !project}
+                presenceStates={presenceStates}
+              />
+            ) : (
+              <SearchPanel 
+                projectId={project?.id} 
+                onSelectResult={handleJumpToResult} 
+              />
+            )}
+          </div>
           <SessionPanel projectId={project?.id} />
         </aside>
         )}
@@ -739,8 +769,11 @@ export default function App() {
       {showAssets && project && (
         <AssetGallery projectId={project.id} onClose={() => setShowAssets(false)} />
       )}
-      
-      <CopilotPanel disabled={isInitializing || !project} />
+            <CopilotPanel 
+            disabled={isInitializing || !project} 
+            projectId={project?.id}
+            fileId={activeFileId}
+          />
 
       <footer className="glass-panel" style={{ marginTop: 'auto', padding: '0.6rem 1.5rem', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '0.8rem', borderTop: '1px solid var(--border-glass)', borderRadius: '0', zIndex: 10000, position: 'relative' }}>
         <div style={{ fontWeight: 600, color: 'var(--text-muted)' }}>

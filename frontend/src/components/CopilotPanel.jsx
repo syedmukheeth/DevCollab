@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { api } from '../lib/api';
 import Markdown from 'react-markdown';
 
-export function CopilotPanel({ disabled }) {
+export function CopilotPanel({ disabled, projectId, fileId }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -41,7 +41,14 @@ export function CopilotPanel({ disabled }) {
         }
       }
 
-      const res = await api.post('/ai/chat', { message: userMsg.content, codeContext, language, selection });
+      const res = await api.post('/ai/chat', { 
+        message: userMsg.content, 
+        codeContext, 
+        language, 
+        selection,
+        projectId,
+        fileId
+      });
       setMessages(prev => [...prev, { role: 'ai', content: res.data.reply }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'error', content: 'Connection failed. Ensure your backend has OPENAI_API_KEY set.' }]);
