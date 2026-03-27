@@ -105,6 +105,13 @@ export function CodeEditor({
           editorRef.current = editor;
           window.getEditorCode = () => editor.getValue();
           
+          window.editorGoToLine = (line) => {
+            if (!editor) return;
+            editor.setPosition({ lineNumber: line, column: 1 });
+            editor.revealLineInCenter(line);
+            editor.focus();
+          };
+
           if (!readOnly) {
             initLanguageClient(monaco, language).catch(console.error);
           }
