@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import * as Y from 'yjs';
 import { SocketIOProvider } from 'y-socket.io';
@@ -64,7 +64,7 @@ export function CodeEditor({
     try {
       const existing = window.localStorage.getItem('devcollab-user');
       if (existing) return JSON.parse(existing);
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
     const id = Math.random().toString(16).slice(2);
@@ -75,7 +75,7 @@ export function CodeEditor({
     const next = { name, color };
     try {
       window.localStorage.setItem('devcollab-user', JSON.stringify(next));
-    } catch (e) {
+    } catch (_e) {
       // ignore
     }
     return next;
@@ -116,17 +116,57 @@ export function CodeEditor({
             initLanguageClient(monaco, language).catch(console.error);
           }
 
-          // Collaborative Cursors & Selections logic
+          if (!collaborationEnabled) {
+            resetCollaboration();
+            return;
+          }
+
+          const ydoc = new Y.Doc();
+          ydocRef.current = ydoc;
+
+          const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
+          const room = `file:${file.id}`;
+          const token = window.localStorage.getItem('devcollab-token');
+          const provider = new SocketIOProvider(socketUrl, room, ydoc, {
+            auth: token ? { token } : {}
+          });
+          providerRef.current = provider;
+
+          const localUser = getOrCreateLocalUser();
+          const userToBroadcast = {
+            ...localUser,
+            name: currentUser?.username || currentUser?.name || localUser.name,
+            avatar: currentUser?.avatarUrl
+          };
+          provider.awareness.setLocalStateField('user', userToBroadcast);
+
+          const ytext = ydoc.getText('monaco');
+          if (ytext.length === 0 && (file.content || '').length > 0) {
+            ytext.insert(0, file.content || '');
+          }
+
+          const model = editor.getModel();
+          if (!model) return;
+
+          const binding = new MonacoBinding(
+            ytext,
+            model,
+            new Set([editor]),
+            provider.awareness
+          );
+          bindingRef.current = binding;
+
+          // Collaborative Cursors & Selections logic (moved after provider init)
           let decorations = [];
           const awareness = provider.awareness;
 
           const updateDecorations = () => {
-            const states = provider.awareness.getStates();
+            const states = awareness.getStates();
             const nextDecorations = [];
 
             states.forEach((state, clientID) => {
-              if (clientID === provider.awareness.clientID) return;
-              if (state.activeFile !== fileId) return;
+              if (clientID === awareness.clientID) return;
+              if (state.activeFile !== file.id) return;
               if (!state.cursor) return;
 
               const { line, ch, selection } = state.cursor;
@@ -185,7 +225,7 @@ export function CodeEditor({
             awareness.setLocalStateField('cursor', {
               line: e.position.lineNumber,
               ch: e.position.column,
-              selection: sel.isEmpty() ? null : {
+              selection: !sel || sel.isEmpty() ? null : {
                 startLine: sel.startLineNumber,
                 startColumn: sel.startColumn,
                 endLine: sel.endLineNumber,
@@ -194,69 +234,8 @@ export function CodeEditor({
             });
           });
 
-          return () => {
-            awareness.off('change', updateDecorations);
-          };
-
-          if (!collaborationEnabled) {
-            resetCollaboration();
-            return;
-          }
-
-          const ydoc = new Y.Doc();
-          ydocRef.current = ydoc;
-
-          const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
-          const room = `file:${file.id}`;
-          const token = window.localStorage.getItem('devcollab-token');
-          const provider = new SocketIOProvider(socketUrl, room, ydoc, {
-            auth: token ? { token } : {}
-          });
-          providerRef.current = provider;
-
-          const localUser = getOrCreateLocalUser();
-          const userToBroadcast = {
-            ...localUser,
-            name: currentUser?.username || currentUser?.name || localUser.name,
-            avatar: currentUser?.avatarUrl
-          };
-          provider.awareness.setLocalStateField('user', userToBroadcast);
-
-          const ytext = ydoc.getText('monaco');
-          if (ytext.length === 0 && (file.content || '').length > 0) {
-            ytext.insert(0, file.content || '');
-          }
-
-          const model = editor.getModel();
-          if (!model) return;
-
-          const binding = new MonacoBinding(
-            ytext,
-            model,
-            new Set([editor]),
-            provider.awareness
-          );
-          bindingRef.current = binding;
-
           editor.onDidScrollChange((e) => {
-            provider.awareness.setLocalStateField('scroll', e.scrollTop);
-          });
-
-          // Broadcast cursor position for remote presence
-          editor.onDidChangeCursorPosition((e) => {
-            provider.awareness.setLocalStateField('cursor', {
-              lineNumber: e.position.lineNumber,
-              column: e.position.column
-            });
-          });
-
-          editor.onDidChangeCursorSelection((e) => {
-            provider.awareness.setLocalStateField('selection', {
-              startLineNumber: e.selection.startLineNumber,
-              startColumn: e.selection.startColumn,
-              endLineNumber: e.selection.endLineNumber,
-              endColumn: e.selection.endColumn
-            });
+            awareness.setLocalStateField('scroll', e.scrollTop);
           });
         }}
         options={{

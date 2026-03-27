@@ -38,7 +38,7 @@ export const loadWorkspace = () => {
       return createDefaultWorkspace();
     }
     return parsed;
-  } catch (error) {
+  } catch (_error) {
     return createDefaultWorkspace();
   }
 };

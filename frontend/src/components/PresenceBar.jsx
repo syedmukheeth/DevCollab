@@ -1,4 +1,4 @@
-import React from 'react';
+import { motion } from 'framer-motion';
 
 export function PresenceBar({ users }) {
   if (!users || users.length === 0) return null;
