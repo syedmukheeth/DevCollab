@@ -23,18 +23,19 @@ const storageService = require('./services/storageService');
 const userRoutes = require('./routes/userRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const accessRoutes = require('./routes/accessRoutes');
+const sessionRoutes = require('./routes/sessionRoutes');
 const { setupLspServer } = require('./services/lspManager');
 
 const env = parseEnv();
 
 const app = express();
-initSentry(app);
+// initSentry(app);
 
 app.use(
   cors({
     origin: (origin, callback) => {
       const allowedOrigins = [
-        env.CLIENT_ORIGIN,
+        ...(Array.isArray(env.CLIENT_ORIGIN) ? env.CLIENT_ORIGIN : [env.CLIENT_ORIGIN]),
         'http://localhost:5173',
       ].filter(Boolean);
       
@@ -81,12 +82,9 @@ app.use((req, res, next) => {
 app.use(
   rateLimit({
     windowMs: 60 * 1000,
-    max: 600, // max 600 requests per minute per IP/User
-    standardHeaders: true,
+    max: 1000,
+    standardHeaders: 'draft-7',
     legacyHeaders: false,
-    keyGenerator: (req) => {
-      return req.userId || req.ip;
-    },
     message: { message: 'Too many requests, please try again later.' }
   })
 );
@@ -110,7 +108,7 @@ app.use('/api', searchRoutes);
 app.use('/api/projects', accessRoutes);
 
 app.use(notFound);
-setupErrorHandlers(app);
+// setupErrorHandlers(app);
 app.use(errorHandler);
 
 let dbReady = false;

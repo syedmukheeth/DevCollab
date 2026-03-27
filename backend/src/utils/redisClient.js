@@ -12,10 +12,27 @@ const redisOptions = {
   maxRetriesPerRequest: null,
 };
 
-const redis = new Redis(redisOptions);
+const isRedisDisabled = !process.env.REDIS_URL && !process.env.REDIS_HOST && process.env.NODE_ENV !== 'production';
 
-redis.on('connect', () => logger.info('Redis connected successfully'));
-redis.on('error', (err) => logger.error('Redis connection error:', err));
+let redis;
+if (isRedisDisabled) {
+  logger.info('ℹ️ Redis is disabled for local development. Caching will be in-memory or skipped.');
+  redis = {
+    on: () => {},
+    get: async () => null,
+    set: async () => 'OK',
+    del: async () => 0,
+    keys: async () => [],
+    status: 'disabled'
+  };
+} else {
+  redis = new Redis(redisOptions);
+  redis.on('connect', () => logger.info('✅ Redis connected successfully'));
+  redis.on('error', (err) => {
+    // Only log critical errors if not in local dev or if it's the first few times
+    logger.error('❌ Redis connection error:', err.message);
+  });
+}
 
 /**
  * Cache utility for getting/setting JSON values
