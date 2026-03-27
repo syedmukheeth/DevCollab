@@ -32,8 +32,20 @@ initSentry(app);
 
 app.use(
   cors({
-    origin: env.CLIENT_ORIGIN || '*',
-    credentials: false
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        env.CLIENT_ORIGIN,
+        'http://localhost:5173',
+      ].filter(Boolean);
+      
+      if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+        callback(null, true);
+      } else {
+        console.warn(`Blocked by CORS: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true
   })
 );
 app.use(
