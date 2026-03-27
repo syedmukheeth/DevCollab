@@ -158,7 +158,7 @@ export function LandingPage({ onEnter }) {
       {/* Stats */}
       <section style={{ textAlign: 'center', padding: '2rem', display: 'flex', justifyContent: 'center', gap: '3rem', flexWrap: 'wrap' }}>
         {[
-          { num: '77', label: 'Tests Passing' },
+          { num: '79', label: 'Tests Passing' },
           { num: '8', label: 'Languages' },
           { num: '10', label: 'Test Suites' },
           { num: '<2s', label: 'Test Speed' }
