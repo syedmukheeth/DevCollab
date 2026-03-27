@@ -1,124 +1,170 @@
 import React, { useState } from 'react';
+import { 
+  FileText, 
+  FolderOpen, 
+  Plus, 
+  Trash2, 
+  Edit3, 
+  FileCode,
+  FileJson,
+  FileTerminal
+} from 'lucide-react';
 
-export function FileExplorer({
-  files,
-  activeFileId,
-  onSelectFile,
-  onCreateFile,
-  onDeleteFile,
+export function FileExplorer({ 
+  files, 
+  activeFileId, 
+  onSelectFile, 
+  onCreateFile, 
+  onDeleteFile, 
   onRenameFile,
-  disabled,
-  presenceStates = []
+  disabled
 }) {
-  const [newFileName, setNewFileName] = useState('');
-  const [editingFileId, setEditingFileId] = useState(null);
-  const [editingName, setEditingName] = useState('');
+  const [isCreating, setIsCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [renamingId, setRenamingId] = useState(null);
+  const [renamingName, setRenamingName] = useState('');
 
-  const handleCreate = (e) => {
-    e.preventDefault();
-    if (!newFileName.trim()) return;
-    onCreateFile(newFileName.trim());
-    setNewFileName('');
-  };
-
-  const startRename = (file) => {
-    setEditingFileId(file.id);
-    setEditingName(file.name);
-  };
-
-  const commitRename = (fileId) => {
-    const name = editingName.trim();
-    if (name) {
-      onRenameFile(fileId, name);
-    }
-    setEditingFileId(null);
-    setEditingName('');
+  const getFileIcon = (filename) => {
+    const ext = filename.split('.').pop().toLowerCase();
+    if (ext === 'js' || ext === 'jsx' || ext === 'ts' || ext === 'tsx') return <FileCode size={16} className="text-blue-400" />;
+    if (ext === 'json') return <FileJson size={16} className="text-amber-400" />;
+    if (ext === 'md') return <FileText size={16} className="text-slate-400" />;
+    if (ext === 'sh') return <FileTerminal size={16} className="text-emerald-400" />;
+    return <FileText size={16} className="text-slate-500" />;
   };
 
   return (
-    <div className="file-explorer" style={{ padding: '0.5rem' }}>
-      <div className="file-explorer-header" style={{ padding: '0.5rem 1rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Files</div>
-      <div className="file-list" style={{ marginTop: '0.5rem' }}>
+    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h3 style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <FolderOpen size={14} /> Workspace
+        </h3>
+        <button 
+          onClick={() => setIsCreating(true)}
+          disabled={disabled}
+          style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', padding: '4px', display: 'flex' }}
+          title="New File"
+        >
+          <Plus size={18} />
+        </button>
+      </div>
+
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+        {isCreating && (
+          <div style={{ padding: '6px 10px', background: 'rgba(59, 130, 246, 0.08)', borderRadius: '8px', marginBottom: '8px', border: '1px solid var(--accent)' }}>
+            <input
+              autoFocus
+              style={{ background: 'none', border: 'none', color: 'white', fontSize: '0.85rem', width: '100%', outline: 'none' }}
+              placeholder="filename.js"
+              value={newName}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newName) {
+                  onCreateFile(newName);
+                  setNewName('');
+                  setIsCreating(false);
+                } else if (e.key === 'Escape') {
+                  setIsCreating(false);
+                }
+              }}
+              onChange={(e) => setNewName(e.target.value)}
+              onBlur={() => { if(!newName) setIsCreating(false); }}
+            />
+          </div>
+        )}
+
         {files.map((file) => {
-          const isActive = file.id === activeFileId;
-          const isEditing = editingFileId === file.id;
+          const isActive = activeFileId === file.id;
+          const isRenaming = renamingId === file.id;
+          
           return (
             <div
               key={file.id}
-              className={`file-item ${isActive ? 'active' : ''}`}
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              onClick={() => onSelectFile(file.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                background: isActive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                border: '1px solid',
+                borderColor: isActive ? 'var(--border-active)' : 'transparent',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                position: 'relative'
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.querySelector('.file-actions').style.opacity = '1';
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) e.currentTarget.style.background = 'transparent';
+                e.currentTarget.querySelector('.file-actions').style.opacity = '0';
+              }}
             >
-              {isEditing ? (
-                <input
-                  className="git-input"
-                  style={{ flex: 1, margin: 0, padding: '2px 8px', fontSize: '0.85rem' }}
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onBlur={() => commitRename(file.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') commitRename(file.id);
-                    if (e.key === 'Escape') {
-                      setEditingFileId(null);
-                      setEditingName('');
-                    }
-                  }}
-                  autoFocus
-                />
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
-                  <div className="file-presence" style={{ display: 'flex', gap: '2px' }}>
-                    {(presenceStates || []).filter(s => s.activeFile === file.id && s.user).map((u, i) => (
-                      <div key={i} className="presence-status-dot" style={{ backgroundColor: u.user.color, width: '8px', height: '8px', position: 'static' }} title={u.user.name} />
-                    ))}
-                  </div>
-                  <button
-                    type="button"
-                    style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', textAlign: 'left', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer', fontSize: '0.85rem' }}
-                    onClick={() => onSelectFile(file.id)}
-                  >
-                    {file.name}
-                  </button>
-                </div>
-              )}
-              {!isEditing && (
-                <div className="file-actions" style={{ display: 'flex', opacity: isActive ? 1 : 0.4 }}>
-                  <button
-                    type="button"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '0 4px' }}
-                    title="Rename"
-                    onClick={() => startRename(file)}
-                  >
-                    ✎
-                  </button>
-                  <button
-                    type="button"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: '0.9rem', padding: '0 4px' }}
-                    title="Delete"
-                    onClick={() => onDeleteFile(file.id)}
-                  >
-                    🗑
-                  </button>
-                </div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                {getFileIcon(file.name)}
+              </div>
+              
+              <div style={{ 
+                flex: 1, 
+                fontSize: '0.85rem', 
+                fontWeight: isActive ? 600 : 500, 
+                overflow: 'hidden', 
+                textOverflow: 'ellipsis', 
+                whiteSpace: 'nowrap' 
+              }}>
+                {isRenaming ? (
+                  <input
+                    autoFocus
+                    value={renamingName}
+                    style={{ background: 'none', border: 'none', color: 'white', width: '100%', outline: 'none', fontSize: '0.85rem' }}
+                    onChange={(e) => setRenamingName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        onRenameFile(file.id, renamingName);
+                        setRenamingId(null);
+                      } else if (e.key === 'Escape') {
+                        setRenamingId(null);
+                      }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  file.name
+                )}
+              </div>
+
+              <div 
+                className="file-actions"
+                style={{ 
+                  display: 'flex', 
+                  gap: '4px', 
+                  opacity: isActive ? 1 : 0,
+                  transition: 'opacity 0.2s',
+                  paddingLeft: '8px'
+                }}
+              >
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setRenamingId(file.id); setRenamingName(file.name); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                  title="Rename"
+                >
+                  <Edit3 size={14} />
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDeleteFile(file.id); }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-dim)', cursor: 'pointer', padding: '2px', display: 'flex' }}
+                  title="Delete"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
           );
         })}
       </div>
-      <form className="file-create-form" onSubmit={handleCreate} style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', padding: '0.5rem' }}>
-        <input
-          type="text"
-          className="git-input"
-          style={{ flex: 1, margin: 0, fontSize: '0.8rem' }}
-          placeholder="New file..."
-          value={newFileName}
-          onChange={(e) => setNewFileName(e.target.value)}
-          disabled={disabled}
-        />
-        <button type="submit" disabled={disabled} className="morphic-button primary" style={{ padding: '0.2rem 0.6rem' }}>
-          +
-        </button>
-      </form>
     </div>
   );
 }
-

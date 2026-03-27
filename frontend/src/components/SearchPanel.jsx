@@ -1,5 +1,15 @@
 import React, { useState } from 'react';
 import { api } from '../lib/api';
+import { 
+  Search, 
+  Settings2, 
+  CaseSensitive, 
+  Regex, 
+  FileText, 
+  ChevronRight,
+  Loader2,
+  XCircle
+} from 'lucide-react';
 
 export function SearchPanel({ projectId, onSelectResult }) {
   const [query, setQuery] = useState('');
@@ -21,7 +31,7 @@ export function SearchPanel({ projectId, onSelectResult }) {
           caseSensitive: isCaseSensitive.toString() 
         }
       });
-      setResults(data.results);
+      setResults(data.results || []);
     } catch (err) {
       console.error('Search failed:', err);
     } finally {
@@ -30,86 +40,127 @@ export function SearchPanel({ projectId, onSelectResult }) {
   };
 
   return (
-    <div className="search-panel" style={{ padding: '0.8rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-      <div className="sidebar-header" style={{ marginBottom: '1rem', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Search Workspace</div>
+    <div style={{ padding: '1rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+      <div style={{ marginBottom: '1rem', fontSize: '0.7rem', color: 'var(--text-dim)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Search size={14} /> Global Search
+      </div>
       
-      <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <form onSubmit={handleSearch} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <div style={{ position: 'relative' }}>
           <input
             type="text"
-            className="git-input"
-            style={{ width: '100%', paddingRight: '32px' }}
-            placeholder="Search across files..."
+            style={{ 
+              width: '100%', 
+              padding: '10px 36px 10px 12px', 
+              background: 'rgba(0,0,0,0.2)', 
+              border: '1px solid var(--border-glass)', 
+              borderRadius: '8px',
+              color: 'white',
+              fontSize: '0.85rem',
+              outline: 'none',
+              transition: 'border-color 0.2s'
+            }}
+            placeholder="Search symbols, text..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+            onBlur={(e) => e.target.style.borderColor = 'var(--border-glass)'}
           />
-          {loading && (
-            <div style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)' }}>
-              <span className="spinner" style={{ width: '14px', height: '14px' }} />
-            </div>
-          )}
+          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-dim)' }}>
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+          </div>
         </div>
         
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
-            <input type="checkbox" checked={isRegex} onChange={e => setIsRegex(e.target.checked)} />
-            .* Regex
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', cursor: 'pointer', color: 'var(--text-muted)' }}>
-            <input type="checkbox" checked={isCaseSensitive} onChange={e => setIsCaseSensitive(e.target.checked)} />
-            Aa Case
-          </label>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            type="button"
+            onClick={() => setIsRegex(!isRegex)}
+            style={{ 
+              flex: 1,
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: '6px', 
+              fontSize: '0.7rem', 
+              padding: '6px',
+              borderRadius: '6px',
+              border: '1px solid',
+              borderColor: isRegex ? 'var(--accent)' : 'var(--border-glass)',
+              background: isRegex ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+              color: isRegex ? 'var(--accent-neon)' : 'var(--text-dim)',
+              cursor: 'pointer',
+              fontWeight: 700
+            }}
+          >
+            <Regex size={14} /> REGEX
+          </button>
+          <button 
+            type="button"
+            onClick={() => setIsCaseSensitive(!isCaseSensitive)}
+            style={{ 
+              flex: 1,
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              gap: '6px', 
+              fontSize: '0.7rem', 
+              padding: '6px',
+              borderRadius: '6px',
+              border: '1px solid',
+              borderColor: isCaseSensitive ? 'var(--accent)' : 'var(--border-glass)',
+              background: isCaseSensitive ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+              color: isCaseSensitive ? 'var(--accent-neon)' : 'var(--text-dim)',
+              cursor: 'pointer',
+              fontWeight: 700
+            }}
+          >
+            <CaseSensitive size={14} /> CASE
+          </button>
         </div>
-        
-        <button type="submit" className="morphic-button primary" style={{ justifyContent: 'center' }} disabled={loading}>
-          Find
-        </button>
       </form>
 
-      <div className="search-results" style={{ flex: 1, marginTop: '1.2rem', overflowY: 'auto', borderTop: '1px solid var(--border-glass)', paddingTop: '1rem' }}>
+      <div style={{ flex: 1, marginTop: '1.5rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1px' }}>
         {results.length === 0 && !loading && query && (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2rem' }}>No matches found.</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-dim)', fontSize: '0.8rem', marginTop: '3rem', padding: '0 1rem' }}>
+            <XCircle size={32} style={{ margin: '0 auto 12px', opacity: 0.2 }} />
+            No results for "{query}"
+          </div>
         )}
         
         {results.map((res, i) => (
           <div 
             key={i} 
-            className="search-result-item" 
             onClick={() => onSelectResult(res.fileId, res.line)}
             style={{ 
-              padding: '10px 12px', 
+              padding: '10px', 
               borderRadius: '8px', 
               cursor: 'pointer', 
-              marginBottom: '8px',
-              border: '1px solid transparent',
-              background: 'rgba(255,255,255,0.02)',
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+              background: 'transparent',
+              transition: 'all 0.2s',
+              border: '1px solid transparent'
             }}
-            onMouseOver={(e) => { 
-              e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; 
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
               e.currentTarget.style.borderColor = 'var(--border-glass)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
             }}
-            onMouseOut={(e) => { 
-              e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; 
-              e.currentTarget.style.borderColor = 'transparent'; 
-              e.currentTarget.style.transform = 'translateY(0)';
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'transparent';
             }}
           >
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1rem' }}>📄</span>
+                <FileText size={14} className="text-blue-400" />
                 {res.fileName}
               </span>
               <span style={{ 
                 fontSize: '0.65rem', 
-                color: 'var(--accent)', 
-                background: 'rgba(52, 152, 219, 0.1)', 
-                padding: '2px 8px', 
-                borderRadius: '12px',
-                fontWeight: 700,
-                border: '1px solid rgba(52, 152, 219, 0.2)'
-              }}>LINE {res.line}</span>
+                color: 'var(--accent-neon)', 
+                background: 'rgba(59, 130, 246, 0.1)', 
+                padding: '2px 6px', 
+                borderRadius: '4px',
+                fontWeight: 800
+              }}>L{res.line}</span>
             </div>
             <div style={{ 
               fontSize: '0.75rem', 
@@ -117,11 +168,10 @@ export function SearchPanel({ projectId, onSelectResult }) {
               overflow: 'hidden', 
               textOverflow: 'ellipsis', 
               whiteSpace: 'nowrap',
-              fontFamily: 'monospace',
-              marginTop: '6px',
+              fontFamily: 'var(--font-mono)',
               paddingLeft: '10px',
-              borderLeft: '2.5px solid var(--accent)',
-              opacity: 0.8
+              borderLeft: '2px solid var(--accent)',
+              opacity: 0.7
             }}>
               {res.content.trim()}
             </div>
