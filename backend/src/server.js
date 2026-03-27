@@ -16,8 +16,9 @@ const githubRoutes = require('./routes/githubRoutes');
 const authRoutes = require('./routes/authRoutes');
 const { verifyAuthToken } = require('./utils/authToken');
 const metricsRoutes = require('./routes/metricsRoutes');
-const sessionRoutes = require('./routes/sessionRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const storageRoutes = require('./routes/storageRoutes');
+const storageService = require('./services/storageService');
 const { setupLspServer } = require('./services/lspManager');
 
 const env = parseEnv();
@@ -86,6 +87,7 @@ app.use('/api', githubRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/storage', storageRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
@@ -101,7 +103,8 @@ app.get('/ready', (req, res) => {
     redis: redisReady === null ? 'disabled' : redisReady ? 'up' : 'down',
     services: {
       api: 'up',
-      collaboration: redisReady === null || redisReady ? 'ready' : 'degraded'
+      collaboration: redisReady === null || redisReady ? 'ready' : 'degraded',
+      storage: 'up' // Basic indicator
     }
   });
 });
@@ -109,6 +112,7 @@ app.get('/ready', (req, res) => {
 const start = async () => {
   await connectDB.connectDB();
   dbReady = true;
+  await storageService.initBucket();
 
   const httpServer = http.createServer(app);
   setupLspServer(httpServer);

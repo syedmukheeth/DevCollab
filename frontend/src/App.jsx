@@ -15,6 +15,7 @@ import { MetricsPanel } from './components/MetricsPanel.jsx';
 import { TerminalPanel } from './components/TerminalPanel.jsx';
 import { MeetingPanel } from './components/MeetingPanel.jsx';
 import { CopilotPanel } from './components/CopilotPanel.jsx';
+import AssetGallery from './components/AssetGallery.jsx';
 import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
@@ -49,6 +50,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [showMetrics, setShowMetrics] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showAssets, setShowAssets] = useState(false);
   const [editorSettings, setEditorSettings] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem('devcollab-editor-settings') || '{}');
@@ -516,6 +518,7 @@ export default function App() {
           <button onClick={() => setShowMetrics(true)} className="morphic-button" title="System Metrics" style={{ fontSize: '1rem', padding: '4px 8px' }}>📊</button>
           <button onClick={() => setShowSettings(true)} className="morphic-button" title="Settings" style={{ fontSize: '1rem', padding: '4px 8px' }}>⚙️</button>
           <button onClick={() => setShowShortcuts(true)} className="morphic-button" title="Keyboard Shortcuts" style={{ fontSize: '1rem', padding: '4px 8px' }}>⌨️</button>
+          <button onClick={() => setShowAssets(true)} className="morphic-button" title="Project Assets" style={{ fontSize: '1rem', padding: '4px 8px' }}>🖼️</button>
           <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme (Ctrl+Shift+T)">
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
@@ -713,6 +716,9 @@ export default function App() {
       )}
       {showShortcuts && (
         <ShortcutsOverlay onClose={() => setShowShortcuts(false)} />
+      )}
+      {showAssets && project && (
+        <AssetGallery projectId={project.id} onClose={() => setShowAssets(false)} />
       )}
       
       <CopilotPanel disabled={isInitializing || !project} />
