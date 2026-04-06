@@ -43,6 +43,8 @@
     "openai": "^6.33.0",
     "redis": "^5.11.0",
     "socket.io": "^4.7.5",
+    "typescript": "^5.0.0",
+    "typescript-language-server": "^4.0.0",
     "vscode-jsonrpc": "^8.2.1",
     "vscode-ws-jsonrpc": "^3.5.0",
     "winston": "^3.19.0",

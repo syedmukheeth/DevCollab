@@ -20,21 +20,30 @@ class PtySidecar {
 
     logger.info(`Creating PTY session ${id} using pooled container...`);
     
-    // 1. Get a pre-warmed container from the pool
-    const container = await containerPool.getContainer('javascript'); // Defaulting to node-alpine for shell
-    const containerId = container.id;
+    const isDockerless = process.env.RENDER || process.env.DOCKERLESS || true;
+    let ptyProcess, containerId, container;
 
-    // 2. Spawn node-pty to exec into the running container
-    // Using 'docker exec -it' allows attaching a TTY to the already running container
-    const ptyProcess = pty.spawn('docker', ['exec', '-it', containerId, 'sh'], {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color'
-      }
-    });
+    if (isDockerless) {
+      const shell = process.platform === 'win32' ? 'powershell.exe' : 'sh';
+      ptyProcess = pty.spawn(shell, [], {
+        name: 'xterm-256color',
+        cols,
+        rows,
+        env: { ...process.env, TERM: 'xterm-256color' }
+      });
+    } else {
+      // 1. Get a pre-warmed container from the pool
+      container = await containerPool.getContainer('javascript'); // Defaulting to node-alpine for shell
+      containerId = container.id;
+
+      // 2. Spawn node-pty to exec into the running container
+      ptyProcess = pty.spawn('docker', ['exec', '-it', containerId, 'sh'], {
+        name: 'xterm-256color',
+        cols,
+        rows,
+        env: { ...process.env, TERM: 'xterm-256color' }
+      });
+    }
 
     const session = {
       pty: ptyProcess,

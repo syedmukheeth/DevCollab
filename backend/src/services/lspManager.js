@@ -18,13 +18,21 @@ function setupLspServer(server) {
     // Architecturally, DevCollab spins up Docker containers for the Language Server.
     // For this tier, we seamlessly provision typescript-language-server dynamically 
     // by streaming standard I/O to the JSON-RPC WebSockets in real time.
+    const isDockerless = process.env.RENDER || process.env.DOCKERLESS || true; // Set true by default for this tier
     let lspProcess;
     
     if (lang === 'javascript' || lang === 'typescript') {
-      lspProcess = spawn('docker', ['run', '-i', '--rm', 'node:20-alpine', 'npx', '-y', 'typescript-language-server', '--stdio']);
+      if (isDockerless) {
+        lspProcess = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['-y', 'typescript-language-server', '--stdio']);
+      } else {
+        lspProcess = spawn('docker', ['run', '-i', '--rm', 'node:20-alpine', 'npx', '-y', 'typescript-language-server', '--stdio']);
+      }
     } else if (lang === 'python') {
-      // generic python fallback
-      lspProcess = spawn('docker', ['run', '-i', '--rm', 'python:3-alpine', 'sh', '-c', 'pip install python-lsp-server && pylsp']);
+      if (isDockerless) {
+        lspProcess = spawn('pylsp');
+      } else {
+        lspProcess = spawn('docker', ['run', '-i', '--rm', 'python:3-alpine', 'sh', '-c', 'pip install python-lsp-server && pylsp']);
+      }
     } else {
       ws.close();
       return;
@@ -41,7 +49,12 @@ function setupLspServer(server) {
     });
 
     lspProcess.stderr.on('data', (data) => {
-      console.error(`LSP [${lang}] error: `, data.toString());
+      console.error(`LSP [${lang}] stderr: `, data.toString());
+    });
+
+    lspProcess.on('error', (err) => {
+      console.error(`LSP [${lang}] fail to spawn: `, err.message);
+      if (ws.readyState === WebSocket.OPEN) ws.close();
     });
 
     ws.on('close', () => {

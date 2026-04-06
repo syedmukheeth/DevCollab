@@ -15,6 +15,12 @@ class ContainerPool {
   }
 
   async initialize() {
+    const isDockerless = process.env.RENDER || process.env.DOCKERLESS || true;
+    if (isDockerless) {
+      logger.info('Dockerless mode enabled. Skipping Container Pool initialization.');
+      return;
+    }
+  
     logger.info('Initializing Container Pool...');
     for (const runtime of Object.keys(RUNTIMES)) {
       this.pools[runtime] = [];

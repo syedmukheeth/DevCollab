@@ -50,7 +50,55 @@ const RUNTIMES = {
   }
 };
 
+const axios = require('axios'); // We'll need this for Piston
+
+const PISTON_LANGS = {
+  python: { language: 'python', version: '3.10.0' },
+  javascript: { language: 'javascript', version: '18.15.0' },
+  typescript: { language: 'typescript', version: '5.0.3' },
+  go: { language: 'go', version: '1.16.2' },
+  java: { language: 'java', version: '15.0.2' },
+  cpp: { language: 'c++', version: '10.2.0' },
+  rust: { language: 'rust', version: '1.68.2' },
+  ruby: { language: 'ruby', version: '3.0.1' }
+};
+
 const runCode = async ({ code, language, onData, onDone, timeoutMs = 10000 }) => {
+  const isDockerless = process.env.RENDER || process.env.DOCKERLESS || true;
+  
+  if (isDockerless) {
+    const pistonConf = PISTON_LANGS[language.toLowerCase()];
+    if (!pistonConf) {
+      onDone(null, new ApiError(400, `Unsupported language for remote execution: ${language}`));
+      return;
+    }
+
+    try {
+      const res = await axios.post('https://emkc.org/api/v2/piston/execute', {
+        language: pistonConf.language,
+        version: pistonConf.version,
+        files: [{ content: code }]
+      }, { timeout: timeoutMs });
+
+      const { run, compile } = res.data;
+      if (compile && compile.stderr) {
+        onData({ isStderr: true, payload: compile.stderr + '\n' });
+      }
+      if (run.stdout) {
+        onData({ isStderr: false, payload: run.stdout });
+      }
+      if (run.stderr) {
+        onData({ isStderr: true, payload: run.stderr });
+      }
+      onDone(run.code || 0, null);
+    } catch (err) {
+      const errMessage = err.response?.data?.message || err.message;
+      onData({ isStderr: true, payload: `[Remote Execution Error] ${errMessage}\n` });
+      onDone(null, err);
+    }
+    return;
+  }
+
   const runtime = RUNTIMES[language.toLowerCase()];
   if (!runtime) {
     onDone(null, new ApiError(400, `Unsupported language: ${language}`));

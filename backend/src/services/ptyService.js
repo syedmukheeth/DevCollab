@@ -13,19 +13,27 @@ class PtyService {
     
     // In production, spawn an isolated Docker container:
     // docker run -i --rm devcollab-runner-[lang] /bin/sh
-    // For universal interactive shell, we can just use an Alpine or Ubuntu container.
-    // For this demonstration, we spawn a generic node shell. On windows, it defaults to powershell if not careful.
     const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
+    const isDockerless = process.env.RENDER || process.env.DOCKERLESS || true;
     
-    // To stick to the Google-grade architecture, we want the PTY isolated. 
-    // We can assume Docker is running: docker run -i --rm -a stdin -a stdout -a stderr alpine sh
-    const ptyProcess = pty.spawn('docker', ['run', '-i', '--rm', 'node:20-alpine', 'sh'], {
-      name: 'xterm-color',
-      cols: 80,
-      rows: 30,
-      cwd: process.env.HOME,
-      env: process.env
-    });
+    let ptyProcess;
+    if (isDockerless) {
+      ptyProcess = pty.spawn(shell, [], {
+        name: 'xterm-color',
+        cols: 80,
+        rows: 30,
+        cwd: process.env.HOME || process.env.USERPROFILE,
+        env: process.env
+      });
+    } else {
+      ptyProcess = pty.spawn('docker', ['run', '-i', '--rm', 'node:20-alpine', 'sh'], {
+        name: 'xterm-color',
+        cols: 80,
+        rows: 30,
+        cwd: process.env.HOME,
+        env: process.env
+      });
+    }
 
     this.sessions.set(id, ptyProcess);
 
