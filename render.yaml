@@ -1,0 +1,43 @@
+services:
+  # Base web service for the Node API
+  - type: web
+    name: syncmesh-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma db push --accept-data-loss
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: syncmesh-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: syncmesh-redis
+          property: connectionString
+      # Let the user set secrets in the dashboard instead of yaml
+      - key: SESSION_SECRET
+        sync: false
+      - key: JWT_PRIVATE_KEY_B64
+        sync: false
+      - key: JWT_PUBLIC_KEY_B64
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+
+  # Redis instance for Real-time WebSocket pub/sub
+  - type: redis
+    name: syncmesh-redis
+    ipAllowList: [] # internal only
+
+databases:
+  # Managed PostgreSQL instance for Prisma
+  - name: syncmesh-db
+    databaseName: syncmesh
+    user: admin
+    plan: free # Can be upgraded to starter/standard
