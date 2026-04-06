@@ -37,7 +37,7 @@ export function SettingsModal({ onClose, onSave, currentUser, onProfileUpdate })
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [settings, setSettings] = useState(() => {
     try {
-      const saved = localStorage.getItem('devcollab-editor-settings');
+      const saved = localStorage.getItem('syncmesh-editor-settings');
       return saved ? { ...DEFAULTS, ...JSON.parse(saved) } : { ...DEFAULTS };
     } catch {
       return { ...DEFAULTS };
@@ -49,14 +49,14 @@ export function SettingsModal({ onClose, onSave, currentUser, onProfileUpdate })
   };
 
   const handleSave = () => {
-    localStorage.setItem('devcollab-editor-settings', JSON.stringify(settings));
+    localStorage.setItem('syncmesh-editor-settings', JSON.stringify(settings));
     onSave(settings);
     onClose();
   };
 
   const handleReset = () => {
     setSettings({ ...DEFAULTS });
-    localStorage.removeItem('devcollab-editor-settings');
+    localStorage.removeItem('syncmesh-editor-settings');
   };
 
   const handleProfileSave = async () => {

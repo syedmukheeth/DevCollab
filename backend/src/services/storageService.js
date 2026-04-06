@@ -7,7 +7,7 @@ const path = require('path');
 // Configure S3 client for MinIO
 const s3 = new AWS.S3({
   endpoint: process.env.S3_ENDPOINT || 'http://localhost:9000',
-  accessKeyId: process.env.S3_ACCESS_KEY || 'devcollab',
+  accessKeyId: process.env.S3_ACCESS_KEY || 'syncmesh',
   secretAccessKey: process.env.S3_SECRET_KEY || 'devpassword',
   s3ForcePathStyle: true, // Required for MinIO
   signatureVersion: 'v4'

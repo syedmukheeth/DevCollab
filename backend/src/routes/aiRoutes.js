@@ -20,7 +20,7 @@ router.post('/chat', requireAuth, async (req, res) => {
       });
     }
 
-    const systemPrompt = `You are a world-class AI Pair Programmer integrated natively into DevCollab, an enterprise cloud IDE. 
+    const systemPrompt = `You are a world-class AI Pair Programmer integrated natively into SyncMesh Forge, an enterprise cloud IDE. 
 The user is working in ${language || 'a text file'}.
 Be concise, accurate, and output your suggested code using markdown code blocks.
 If the user provides selected code, focus heavily on that selection.

@@ -155,7 +155,7 @@ export function CopilotPanel({ disabled, projectId, fileId }) {
                   <Zap size={18} className="text-blue-400" />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>DevCollab Copilot</div>
+                  <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'white' }}>SyncMesh Forge Copilot</div>
                   <div style={{ fontSize: '0.65rem', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>GPT-4o Intelligence</div>
                 </div>
               </div>

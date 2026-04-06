@@ -15,7 +15,7 @@ function setupLspServer(server) {
   wss.on('connection', (ws, request) => {
     const lang = request.url.split('/').pop();
     
-    // Architecturally, DevCollab spins up Docker containers for the Language Server.
+    // Architecturally, SyncMesh Forge spins up Docker containers for the Language Server.
     // For this tier, we seamlessly provision typescript-language-server dynamically 
     // by streaming standard I/O to the JSON-RPC WebSockets in real time.
     const isDockerless = process.env.RENDER || process.env.DOCKERLESS || true; // Set true by default for this tier

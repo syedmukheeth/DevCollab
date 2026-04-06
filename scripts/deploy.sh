@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# DevCollab Production Deployment Script
+# SyncMesh Forge Production Deployment Script
 # Supports AWS EC2 and Oracle Cloud Always-Free ARM instances
 
-echo "🚀 Starting DevCollab Production Deployment..."
+echo "🚀 Starting SyncMesh Forge Production Deployment..."
 
 # 1. System Dependencies
 if ! command -v docker &> /dev/null; then
@@ -30,7 +30,7 @@ NODE_ENV=production
 PORT=4000
 DB_USER=devcollab
 DB_PASSWORD=$(openssl rand -base64 16)
-DB_NAME=devcollab_prod
+DB_NAME=syncmesh_prod
 SESSION_SECRET=$(openssl rand -base64 32)
 FRONTEND_URL=http://localhost:5173
 EOF

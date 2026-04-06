@@ -12,7 +12,7 @@ class PtyService {
     }
     
     // In production, spawn an isolated Docker container:
-    // docker run -i --rm devcollab-runner-[lang] /bin/sh
+    // docker run -i --rm syncmesh-runner-[lang] /bin/sh
     const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
     const isDockerless = process.env.RENDER || process.env.DOCKERLESS || true;
     

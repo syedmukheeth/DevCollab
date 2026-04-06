@@ -31,7 +31,7 @@ export const initLanguageClient = async (monaco, language) => {
     const writer = new WebSocketMessageWriter(webSocket);
 
     const languageClient = new MonacoLanguageClient({
-      name: `DevCollab ${language.toUpperCase()} Client`,
+      name: `SyncMesh Forge ${language.toUpperCase()} Client`,
       clientOptions: {
         documentSelector: [language]
       },

@@ -1,5 +1,5 @@
 /**
- * Keyboard shortcuts system for DevCollab.
+ * Keyboard shortcuts system for SyncMesh Forge.
  * Registers global shortcuts and provides a help overlay.
  */
 

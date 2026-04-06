@@ -76,10 +76,10 @@ export default function App() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [activeSidebarTab, setActiveSidebarTab] = useState('explorer');
   const [currentUser, setCurrentUser] = useState(null);
-  const [theme, setTheme] = useState(() => window.localStorage.getItem('devcollab-theme') || 'dark');
+  const [theme, setTheme] = useState(() => window.localStorage.getItem('syncmesh-theme') || 'dark');
   const [editorSettings, setEditorSettings] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('devcollab-editor-settings') || '{}');
+      return JSON.parse(localStorage.getItem('syncmesh-editor-settings') || '{}');
     } catch { return {}; }
   });
 
@@ -88,14 +88,14 @@ export default function App() {
 
   const getOrCreateLocalUser = () => {
     try {
-      const existing = window.localStorage.getItem('devcollab-user');
+      const existing = window.localStorage.getItem('syncmesh-user');
       if (existing) return JSON.parse(existing);
     } catch (e) {}
     const id = Math.random().toString(16).slice(2);
     const name = `User-${id.slice(0, 6)}`;
     const color = `#${Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0')}`;
     const next = { name, color };
-    window.localStorage.setItem('devcollab-user', JSON.stringify(next));
+    window.localStorage.setItem('syncmesh-user', JSON.stringify(next));
     return next;
   };
 
@@ -123,16 +123,16 @@ export default function App() {
         const urlParams = new URLSearchParams(window.location.search);
         const tokenFromUrl = urlParams.get('token');
         if (tokenFromUrl) {
-          window.localStorage.setItem('devcollab-token', tokenFromUrl);
+          window.localStorage.setItem('syncmesh-token', tokenFromUrl);
           window.history.replaceState({}, document.title, window.location.pathname);
           setShowLanding(false);
         }
 
-        const currentToken = window.localStorage.getItem('devcollab-token');
+        const currentToken = window.localStorage.getItem('syncmesh-token');
         if (!currentToken) {
           const authRes = await api.post('/auth/anonymous', {});
           if (authRes.data?.token) {
-            window.localStorage.setItem('devcollab-token', authRes.data.token);
+            window.localStorage.setItem('syncmesh-token', authRes.data.token);
           }
         }
 
@@ -185,7 +185,7 @@ export default function App() {
     }
     const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
     const room = `project:${project.id}`;
-    const token = window.localStorage.getItem('devcollab-token');
+    const token = window.localStorage.getItem('syncmesh-token');
     const ydoc = new Y.Doc();
     const provider = new SocketIOProvider(socketUrl, room, ydoc, {
       auth: token ? { token } : {}
@@ -337,7 +337,7 @@ export default function App() {
   const toggleTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark';
     setTheme(next);
-    window.localStorage.setItem('devcollab-theme', next);
+    window.localStorage.setItem('syncmesh-theme', next);
   };
 
   useEffect(() => {

@@ -62,7 +62,7 @@ export function CodeEditor({
 
   const getOrCreateLocalUser = () => {
     try {
-      const existing = window.localStorage.getItem('devcollab-user');
+      const existing = window.localStorage.getItem('syncmesh-user');
       if (existing) return JSON.parse(existing);
     } catch (_e) {
       // ignore
@@ -74,7 +74,7 @@ export function CodeEditor({
       .padStart(6, '0')}`;
     const next = { name, color };
     try {
-      window.localStorage.setItem('devcollab-user', JSON.stringify(next));
+      window.localStorage.setItem('syncmesh-user', JSON.stringify(next));
     } catch (_e) {
       // ignore
     }
@@ -126,7 +126,7 @@ export function CodeEditor({
 
           const socketUrl = import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000';
           const room = `file:${file.id}`;
-          const token = window.localStorage.getItem('devcollab-token');
+          const token = window.localStorage.getItem('syncmesh-token');
           const provider = new SocketIOProvider(socketUrl, room, ydoc, {
             auth: token ? { token } : {}
           });

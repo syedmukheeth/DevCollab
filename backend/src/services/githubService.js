@@ -71,9 +71,9 @@ const createRepoIfNeeded = async ({ projectId, ownerId }) => {
   const owner = await getOrResolveOwner(octokit, project);
   const authUser = await octokit.users.getAuthenticated();
   const authLogin = authUser.data.login;
-  const repoPrefix = getEnv('GITHUB_REPO_PREFIX') || 'devcollab-';
+  const repoPrefix = getEnv('GITHUB_REPO_PREFIX') || 'syncmesh-';
   const defaultBranch = getEnv('GITHUB_DEFAULT_BRANCH') || project.githubDefaultBranch || 'main';
-  const baseDir = getEnv('GITHUB_BASE_DIR') || 'devcollab';
+  const baseDir = getEnv('GITHUB_BASE_DIR') || 'syncmesh';
   const autoInit = normalizeBool(getEnv('GITHUB_AUTO_INIT'), true);
   const privateRepo = normalizeBool(getEnv('GITHUB_PRIVATE'), false);
 
@@ -229,7 +229,7 @@ const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) =>
   const commit = await octokit.git.createCommit({
     owner,
     repo,
-    message: message || `Update from DevCollab (${new Date().toISOString()})`,
+    message: message || `Update from SyncMesh Forge (${new Date().toISOString()})`,
     tree: tree.data.sha,
     parents: [latestCommitSha]
   });
@@ -258,8 +258,8 @@ const createPullRequest = async ({ projectId, ownerId, head, base, title, body }
   const { data } = await octokit.pulls.create({
     owner: project.githubOwner,
     repo: project.githubRepo,
-    title: title || 'Pull Request from DevCollab',
-    body: body || 'This PR was created from the DevCollab IDE.',
+    title: title || 'Pull Request from SyncMesh Forge',
+    body: body || 'This PR was created from the SyncMesh Forge IDE.',
     head, // branch name
     base: base || project.githubDefaultBranch || 'main'
   });
@@ -276,7 +276,7 @@ const getGithubFileContent = async ({ projectId, ownerId, path }) => {
   const { data } = await octokit.repos.getContent({
     owner: project.githubOwner,
     repo: project.githubRepo,
-    path: `${getEnv('GITHUB_BASE_DIR') || 'devcollab'}/${path}`,
+    path: `${getEnv('GITHUB_BASE_DIR') || 'syncmesh'}/${path}`,
     ref: project.githubDefaultBranch || 'main'
   });
 

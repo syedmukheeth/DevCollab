@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'devcollab-local-workspace';
+const STORAGE_KEY = 'syncmesh-local-workspace';
 
 const createId = (prefix) => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -13,7 +13,7 @@ export const createDefaultWorkspace = () => {
   return {
     project: {
       id: projectId,
-      name: 'My DevCollab Project',
+      name: 'My SyncMesh Forge Project',
       description: 'Local workspace'
     },
     files: [
@@ -21,7 +21,7 @@ export const createDefaultWorkspace = () => {
         id: fileId,
         projectId,
         name: 'main.js',
-        content: "console.log('Welcome to DevCollab local mode!');\n",
+        content: "console.log('Welcome to SyncMesh Forge local mode!');\n",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

@@ -69,7 +69,7 @@ services:
       # Required for execution container spawning mapping (Docker-in-Docker via socket)
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
-      - devcollab_net
+      - syncmesh_net
     deploy:
       replicas: 3
       update_config:
