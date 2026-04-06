@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# SyncMesh Forge Production Deployment Script
+# SyncMesh Production Deployment Script
 # Supports AWS EC2 and Oracle Cloud Always-Free ARM instances
 
-echo "🚀 Starting SyncMesh Forge Production Deployment..."
+echo "🚀 Starting SyncMesh Production Deployment..."
 
 # 1. System Dependencies
 if ! command -v docker &> /dev/null; then

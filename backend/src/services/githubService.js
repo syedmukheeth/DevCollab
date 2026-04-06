@@ -229,7 +229,7 @@ const commitProjectToBranch = async ({ projectId, ownerId, branch, message }) =>
   const commit = await octokit.git.createCommit({
     owner,
     repo,
-    message: message || `Update from SyncMesh Forge (${new Date().toISOString()})`,
+    message: message || `Update from SyncMesh (${new Date().toISOString()})`,
     tree: tree.data.sha,
     parents: [latestCommitSha]
   });
@@ -258,8 +258,8 @@ const createPullRequest = async ({ projectId, ownerId, head, base, title, body }
   const { data } = await octokit.pulls.create({
     owner: project.githubOwner,
     repo: project.githubRepo,
-    title: title || 'Pull Request from SyncMesh Forge',
-    body: body || 'This PR was created from the SyncMesh Forge IDE.',
+    title: title || 'Pull Request from SyncMesh',
+    body: body || 'This PR was created from the SyncMesh IDE.',
     head, // branch name
     base: base || project.githubDefaultBranch || 'main'
   });

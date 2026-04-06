@@ -111,7 +111,7 @@ export function LandingPage({ onEnter }) {
             <Zap size={14} /> v2.0 Enterprise Release
           </div>
           
-            SyncMesh Forge
+            SyncMesh
           
           <p style={{
             fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)',
@@ -253,7 +253,7 @@ export function LandingPage({ onEnter }) {
           Designed for the next generation of engineers.
         </div>
         <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          © 2026 SyncMesh Forge Enterprise. Managed by <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Syed Mukheeth</a>
+          © 2026 SyncMesh Enterprise. Managed by <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Syed Mukheeth</a>
         </div>
       </footer>
     </div>

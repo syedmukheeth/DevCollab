@@ -1,18 +1,18 @@
-# SyncMesh Forge 🌌
+# SyncMesh 🌌
 
 [![CI/CD](https://github.com/syedmukheeth/SyncMesh-Forge/actions/workflows/ci.yml/badge.svg)](https://github.com/syedmukheeth/SyncMesh-Forge/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/version-1.5.0-blue.svg)](https://github.com/syedmukheeth/SyncMesh-Forge)
 [![Observability](https://img.shields.io/badge/OpenTelemetry-Active-611f69)](https://opentelemetry.io/)
 
-**SyncMesh Forge** is a production-hardened, real-time collaborative development platform engineered for modern, distributed software teams. It bridges the gap between high-performance local IDEs and the fluid scalability of cloud-native orchestration.
+**SyncMesh** is a production-hardened, real-time collaborative development platform engineered for modern, distributed software teams. It bridges the gap between high-performance local IDEs and the fluid scalability of cloud-native orchestration.
 
 ---
 
 ## 🌠 The Vision
 > **"To architect a resilient, multi-tenant distributed forge that provides high-fidelity, low-latency synchronization of shared developer state, maintaining strict sandbox isolation and offering a zero-friction, premium-grade user experience."**
 
-SyncMesh Forge is the next evolution of collaborative engineering—a **Forge for the Synchronous Mesh**, where code, shell, and communication converge into a single, unified developer experience.
+SyncMesh is the next evolution of collaborative engineering—a **Forge for the Synchronous Mesh**, where code, shell, and communication converge into a single, unified developer experience.
 
 ---
 
@@ -41,7 +41,7 @@ SyncMesh Forge is the next evolution of collaborative engineering—a **Forge fo
 
 ```mermaid
 graph TD
-    Client[SyncMesh Forge Web] -->|RS256 Auth| API[SyncMesh API]
+    Client[SyncMesh Web] -->|RS256 Auth| API[SyncMesh API]
     Client -->|Socket.io| CollabServer[SyncMesh Collab Server]
     Client <-->|WebRTC| Peers[Team Members]
     

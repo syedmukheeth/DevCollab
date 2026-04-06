@@ -13,7 +13,7 @@ export const createDefaultWorkspace = () => {
   return {
     project: {
       id: projectId,
-      name: 'My SyncMesh Forge Project',
+      name: 'My SyncMesh Project',
       description: 'Local workspace'
     },
     files: [
@@ -21,7 +21,7 @@ export const createDefaultWorkspace = () => {
         id: fileId,
         projectId,
         name: 'main.js',
-        content: "console.log('Welcome to SyncMesh Forge local mode!');\n",
+        content: "console.log('Welcome to SyncMesh local mode!');\n",
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       }

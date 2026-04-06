@@ -1,5 +1,5 @@
 /**
- * Keyboard shortcuts system for SyncMesh Forge.
+ * Keyboard shortcuts system for SyncMesh.
  * Registers global shortcuts and provides a help overlay.
  */
 

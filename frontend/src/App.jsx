@@ -41,7 +41,7 @@ import { registerShortcuts } from './lib/keybindings.js';
 import { api } from './lib/api.js';
 import { createDefaultWorkspace, createLocalFile, loadWorkspace, saveWorkspace } from './lib/workspace.js';
 
-const DEFAULT_PROJECT_NAME = 'My SyncMesh Forge Project';
+const DEFAULT_PROJECT_NAME = 'My SyncMesh Project';
 
 export default function App() {
   const [mode, setMode] = useState('cloud');
@@ -55,7 +55,7 @@ export default function App() {
   const [sessionUser, setSessionUser] = useState(null);
   const [githubUser, setGithubUser] = useState(null);
   const [gitBranch, setGitBranch] = useState('main');
-  const [gitMessage, setGitMessage] = useState('Update from SyncMesh Forge');
+  const [gitMessage, setGitMessage] = useState('Update from SyncMesh');
   const [gitStatus, setGitStatus] = useState('');
   const [loadingGitInit, setLoadingGitInit] = useState(false);
   const [loadingGitCommit, setLoadingGitCommit] = useState(false);
@@ -411,7 +411,7 @@ export default function App() {
     <div className="app-root">
       <header className="app-header">
         <div className="app-header-left">
-          <div className="app-title"><Box size={22} className="text-blue-500" /> SyncMesh Forge</div>
+          <div className="app-title"><Box size={22} className="text-blue-500" /> SyncMesh</div>
           <div className="app-subtitle">
             {project?.name || 'Loading...'}
             <span style={{ opacity: 0.3, margin: '0 8px' }}>|</span>
