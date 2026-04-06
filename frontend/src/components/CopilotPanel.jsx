@@ -12,7 +12,8 @@ import {
   Maximize2, 
   Minimize2,
   AlertCircle,
-  Terminal
+  Terminal,
+  Loader2
 } from 'lucide-react';
 
 export function CopilotPanel({ disabled, projectId, fileId }) {
@@ -294,14 +295,3 @@ export function CopilotPanel({ disabled, projectId, fileId }) {
     </>
   );
 }
-
-const Loader2 = ({ size, className }) => (
-  <motion.div
-    animate={{ rotate: 360 }}
-    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-    className={className}
-    style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-  >
-    <Zap size={size} />
-  </motion.div>
-);

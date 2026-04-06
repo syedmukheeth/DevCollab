@@ -9,7 +9,8 @@ import {
   Plus, 
   GitPullRequest,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  RefreshCcw
 } from 'lucide-react';
 
 export function GitPanel({
@@ -191,14 +192,3 @@ export function GitPanel({
     </div>
   );
 }
-
-const RefreshCcw = ({ size, className }) => (
-  <motion.div
-    animate={{ rotate: 360 }}
-    transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-    className={className}
-    style={{ width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-  >
-    <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85.83 6.72 2.24M21 3v9h-9" stroke="currentColor" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-  </motion.div>
-);
