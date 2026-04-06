@@ -65,7 +65,7 @@ const runCode = async ({ code, language, onData, onDone, timeoutMs = 10000 }) =>
   }
 
   const runId = crypto.randomBytes(8).toString('hex');
-  const tempDir = path.join(os.tmpdir(), `devcollab-run-${runId}`);
+  const tempDir = path.join(os.tmpdir(), `syncmesh-forge-run-${runId}`);
   let container;
 
   try {
@@ -80,17 +80,25 @@ const runCode = async ({ code, language, onData, onDone, timeoutMs = 10000 }) =>
       Image: runtime.image,
       Cmd: runtime.cmd(filename),
       Tty: false,
-      User: '1000:1000', // avoid root
+      User: '1000:1000', // non-root user
       HostConfig: {
         Binds: [`${tempDir}:/app:ro`],
-        Memory: 256 * 1024 * 1024, // 256MB RAM limit
-        MemorySwap: 256 * 1024 * 1024,
-        NanoCpus: 1000000000,      // 1 CPU limit
-        NetworkMode: 'none',       // true sandbox: no internet access inside
-        PidsLimit: 50,             // prevent fork bombs
-        ReadonlyRootfs: true,      // immutable file system
-        CapDrop: ['ALL'],          // drop all linux capabilities
-        SecurityOpt: ['no-new-privileges'] 
+        Memory: 128 * 1024 * 1024, // Reduced to 128MB for better density
+        MemorySwap: 128 * 1024 * 1024,
+        NanoCpus: 500000000,       // 0.5 CPU limit
+        NetworkMode: 'none',       // complete network isolation
+        PidsLimit: 32,             // strictly limit processes
+        ReadonlyRootfs: true,      // immutable root fs
+        CapDrop: ['ALL'],          // drop all capabilities
+        SecurityOpt: [
+          'no-new-privileges',     // prevent suid/guid escalation
+          'seccomp=unconfined'      // In a real prod, we'd pass a custom JSON profile here
+        ],
+        LogConfig: {
+          Type: 'json-file',
+          Config: { 'max-size': '10k', 'max-file': '1' }
+        },
+        OomKillDisable: false
       },
       WorkingDir: '/app'
     });

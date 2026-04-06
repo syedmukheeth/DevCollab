@@ -35,12 +35,13 @@ router.get('/projects/:projectId/search', requireAuth, async (req, res, next) =>
     }
 
     for (const file of files) {
-      const lines = file.content.split('\n');
+      const lines = (file.content || '').split('\n');
       lines.forEach((line, index) => {
         let match = false;
         if (isRegex) {
+          searchPattern.lastIndex = 0;
           match = searchPattern.test(line);
-          // reset regex lastIndex for global searches if needed, but test() on single line is fine
+
         } else {
           const textToSearch = isCaseSensitive ? line : line.toLowerCase();
           const query = isCaseSensitive ? q : q.toLowerCase();

@@ -1,5 +1,5 @@
 const express = require('express');
-const { verifyAuthToken } = require('../utils/authToken');
+const { requireAuth } = require('../middleware/auth');
 const { OpenAI } = require('openai');
 const router = express.Router();
 
@@ -9,7 +9,7 @@ if (process.env.OPENAI_API_KEY) {
 }
 
 // POST /api/ai/chat
-router.post('/chat', verifyAuthToken, async (req, res) => {
+router.post('/chat', requireAuth, async (req, res) => {
   try {
     const { message, codeContext, language, selection } = req.body;
 
@@ -37,7 +37,7 @@ You also have access to relevant snippets from other files in the workspace (RAG
           where: {
             projectId: req.body.projectId, // Assuming projectId is passed
             id: { not: req.body.fileId }, // Don't fetch current file again
-            OR: keywords.map(k => ({ content: { contains: k, mode: 'insensitive' } }))
+            OR: keywords.map(k => ({ content: { contains: k } }))
           },
           take: 3,
           select: { name: true, content: true }

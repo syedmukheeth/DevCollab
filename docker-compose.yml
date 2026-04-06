@@ -4,9 +4,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: devcollab
-      POSTGRES_PASSWORD: devpassword
-      POSTGRES_DB: devcollab
+      POSTGRES_USER: syncmeshforge
+      POSTGRES_PASSWORD: syncmeshpassword
+      POSTGRES_DB: syncmeshforge
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -21,8 +21,8 @@ services:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: devcollab
-      MINIO_ROOT_PASSWORD: devpassword
+      MINIO_ROOT_USER: syncmeshforge
+      MINIO_ROOT_PASSWORD: syncmeshpassword
     command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
@@ -34,15 +34,15 @@ services:
     environment:
       PORT: 4000
       NODE_ENV: production
-      DATABASE_URL: "postgresql://devcollab:devpassword@postgres:5432/devcollab?schema=public"
+      DATABASE_URL: "postgresql://syncmeshforge:syncmeshpassword@postgres:5432/syncmeshforge?schema=public"
       CLIENT_ORIGIN: http://localhost:5173
       SOCKET_ORIGIN: http://localhost:5173
       REDIS_URL: redis://redis:6379
       SESSION_SECRET: change_me_to_a_long_random_string
       S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: devcollab
-      S3_SECRET_KEY: devpassword
-      S3_BUCKET: devcollab-data
+      S3_ACCESS_KEY: syncmeshforge
+      S3_SECRET_KEY: syncmeshpassword
+      S3_BUCKET: syncmesh-forge-data
     depends_on:
       - postgres
       - redis

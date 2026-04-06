@@ -30,9 +30,9 @@ const FEATURES = [
     desc: 'Commit, push, and create PRs directly from your browser workspace.'
   },
   {
-    icon: <ShieldCheck className="w-8 h-8 text-amber-400" />,
+    icon: <Shield className="w-8 h-8 text-amber-400" />,
     title: 'Enterprise Security',
-    desc: 'Circuit breakers, RBAC, and HMAC-signed API communication.'
+    desc: 'Circuit breakers, RBAC, and RS256 asymmetric JWT communication.'
   },
   {
     icon: <History className="w-8 h-8 text-rose-400" />,
@@ -108,22 +108,10 @@ export function LandingPage({ onEnter }) {
             textTransform: 'uppercase',
             letterSpacing: '0.05em'
           }}>
-            <Sparkles size={14} /> v2.0 Enterprise Release
+            <Zap size={14} /> v2.0 Enterprise Release
           </div>
           
-          <h1 style={{
-            fontSize: 'clamp(3rem, 8vw, 5.5rem)',
-            fontFamily: 'var(--font-heading)',
-            fontWeight: 900,
-            letterSpacing: '-0.04em',
-            marginBottom: '1rem',
-            lineHeight: 0.9,
-            background: 'linear-gradient(to bottom, #fff 40%, rgba(255,255,255,0.6) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
-          }}>
-            DevCollab
-          </h1>
+            SyncMesh Forge
           
           <p style={{
             fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)',
@@ -244,7 +232,7 @@ export function LandingPage({ onEnter }) {
           { icon: <Cpu size={24} />, num: '8', label: 'Languages' },
           { icon: <Globe size={24} />, num: 'Cloud', label: 'Architecture' },
           { icon: <History size={24} />, num: '∞', label: 'Snapshots' },
-          { icon: <ShieldCheck size={24} />, num: 'AES', label: 'Security' }
+          { icon: <Shield size={24} />, num: 'AES', label: 'Security' }
         ].map((s, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
             <div style={{ color: 'var(--accent-neon)', marginBottom: '4px' }}>{s.icon}</div>
@@ -265,7 +253,7 @@ export function LandingPage({ onEnter }) {
           Designed for the next generation of engineers.
         </div>
         <div style={{ marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-          © 2026 DevCollab Enterprise. Managed by <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Syed Mukheeth</a>
+          © 2026 SyncMesh Forge Enterprise. Managed by <a href="#" style={{ color: 'var(--accent)', textDecoration: 'none', fontWeight: 700 }}>Syed Mukheeth</a>
         </div>
       </footer>
     </div>

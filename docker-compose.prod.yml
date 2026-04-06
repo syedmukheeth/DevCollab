@@ -5,21 +5,21 @@ services:
     image: postgres:15-alpine
     restart: always
     environment:
-      POSTGRES_USER: ${DB_USER:-devcollab}
+      POSTGRES_USER: ${DB_USER:-syncmeshforge}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-supersecret}
-      POSTGRES_DB: ${DB_NAME:-devcollab_prod}
+      POSTGRES_DB: ${DB_NAME:-syncmeshforge_prod}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - devcollab_net
+      - syncmeshforge_net
 
   minio:
     image: minio/minio
     restart: always
     environment:
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-devcollab}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-syncmeshforge}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-supersecret-minio}
     command: server /data
     ports:
@@ -28,7 +28,7 @@ services:
     volumes:
       - miniodata:/data
     networks:
-      - devcollab_net
+      - syncmeshforge_net
 
   redis:
     image: redis:7-alpine
@@ -39,7 +39,7 @@ services:
     volumes:
       - redisdata:/data
     networks:
-      - devcollab_net
+      - syncmeshforge_net
 
   api:
     build: 
@@ -53,12 +53,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 4000
-      DATABASE_URL: postgresql://${DB_USER:-devcollab}:${DB_PASSWORD:-supersecret}@db:5432/${DB_NAME:-devcollab_prod}?schema=public
+      DATABASE_URL: postgresql://${DB_USER:-syncmeshforge}:${DB_PASSWORD:-supersecret}@db:5432/${DB_NAME:-syncmeshforge_prod}?schema=public
       REDIS_HOST: redis
       MINIO_ENDPOINT: minio
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-devcollab}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-syncmeshforge}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-supersecret-minio}
-      CLIENT_ORIGIN: ${FRONTEND_URL:-https://devcollab.com}
+      CLIENT_ORIGIN: ${FRONTEND_URL:-https://syncmeshforge.com}
       SESSION_SECRET: ${SESSION_SECRET}
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
@@ -84,5 +84,5 @@ volumes:
   miniodata:
 
 networks:
-  devcollab_net:
+  syncmeshforge_net:
     driver: bridge

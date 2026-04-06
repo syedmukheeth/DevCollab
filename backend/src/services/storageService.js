@@ -13,7 +13,7 @@ const s3 = new AWS.S3({
   signatureVersion: 'v4'
 });
 
-const bucketName = process.env.S3_BUCKET || 'devcollab-data';
+const bucketName = process.env.S3_BUCKET || 'syncmesh-forge-data';
 
 // Initialize bucket
 const initBucket = async () => {

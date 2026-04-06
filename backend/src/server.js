@@ -1,10 +1,14 @@
 require('dotenv').config();
+const telemetry = require('./utils/telemetry');
+// Start the telemetry SDK before any other modules to allow for auto-instrumentation
+telemetry.start();
 const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const http = require('http');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const cookieParser = require('cookie-parser');
 const connectDB = require('./config/db');
 const { parseEnv } = require('./config/env');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
@@ -25,6 +29,7 @@ const searchRoutes = require('./routes/searchRoutes');
 const accessRoutes = require('./routes/accessRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const { setupLspServer } = require('./services/lspManager');
+const historyRoutes = require('./routes/historyRoutes');
 
 const env = parseEnv();
 
@@ -62,15 +67,16 @@ app.use(
 app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 app.use(morgan('dev'));
+app.use(cookieParser());
 
 // Extract userId from auth header for rate limiting without enforcing it
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.split(' ')[1];
     try {
-      const decoded = verifyAuthToken(token, process.env.SESSION_SECRET);
-      if (decoded && decoded.userId) {
+      const decoded = await verifyAuthToken({ token });
+      if (decoded.ok && decoded.userId) {
         req.userId = decoded.userId;
       }
     } catch (_e) { /* ignore invalid tokens for rate limiting */ }
@@ -106,6 +112,7 @@ app.use('/api/storage', storageRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api', searchRoutes);
 app.use('/api/projects', accessRoutes);
+app.use('/api/history', historyRoutes);
 
 app.use(notFound);
 // setupErrorHandlers(app);

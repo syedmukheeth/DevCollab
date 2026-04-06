@@ -24,11 +24,7 @@ router.get('/github/callback', async (req, res, next) => {
       return res.status(400).json({ message: 'Missing code or state' });
     }
     const _githubUser = await handleGitHubCallback(code, userId);
-    const token = issueAuthToken({
-      userId,
-      secret: process.env.SESSION_SECRET,
-      ttlSeconds: 60 * 60 * 24 * 7
-    });
+    const token = await issueAuthToken({ userId, ttlSeconds: 60 * 60 * 24 * 7 });
     // Redirect back to frontend with token
     const clientOrigin = process.env.CLIENT_ORIGIN?.split(',')[0] || 'http://localhost:5173';
     res.redirect(`${clientOrigin}?token=${token}&github=connected`);

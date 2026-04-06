@@ -5,6 +5,8 @@ const { prisma } = require('../config/db');
 const { createClient } = require('redis');
 const { createAdapter } = require('@socket.io/redis-adapter');
 const { setupWebRTCSignaling } = require('./signaling');
+const historyService = require('../services/historyService');
+const logger = require('../utils/logger');
 
 const ROOM_PREFIX = 'file:';
 
@@ -16,11 +18,12 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
   });
 
   let redisConnected = false;
+  let pubClient = null;
   if (redisUrl) {
     try {
       const url = new URL(redisUrl);
       const isTls = url.protocol === 'rediss:';
-      const pubClient = createClient({
+      pubClient = createClient({
         url: redisUrl,
         socket: isTls
           ? {
@@ -43,20 +46,42 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
       console.log('✅ Redis Adapter connected');
     } catch (_err) {
       console.warn('⚠️ Redis connection failed, falling back to in-memory adapter for local development.');
+      pubClient = null;
       redisConnected = false;
     }
   }
 
   const ysocketio = new YSocketIO(io, {
-    authenticate: (handshake) => {
+    authenticate: async (handshake) => {
       const { verifyAuthToken } = require('../utils/authToken');
       const token = handshake?.auth?.token;
-      const secret = process.env.SESSION_SECRET;
-      const verified = verifyAuthToken({ token, secret });
-      return verified.ok;
+      const { ok } = await verifyAuthToken({ token });
+      return ok;
     }
   });
   ysocketio.initialize();
+
+  // --- SEPARATE AWARENESS / PRESENCE CHANNEL ---
+  // A dedicated namespace for high-frequency cursor/presence data.
+  // This ensures document synchronization never blocks awareness updates.
+  const presenceNamespace = io.of(/^\/presence\|.*$/);
+  
+  presenceNamespace.on('connection', (socket) => {
+    const room = socket.nsp.name.split('|')[1];
+    if (!room) return socket.disconnect();
+
+    socket.join(room);
+    logger.info(`Presence: Client connected to room ${room}`);
+
+    socket.on('awareness-update', (update) => {
+      // Relay awareness to all other clients in the same project room
+      socket.to(room).emit('awareness-update', update);
+    });
+
+    socket.on('disconnect', () => {
+      logger.info(`Presence: Client disconnected from room ${room}`);
+    });
+  });
 
   const yPersistTimers = new Map();
 
@@ -79,13 +104,22 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
         try {
           const update = Y.encodeStateAsUpdate(ydoc);
           const fileId = parseFileIdFromRoom(room) || null;
+          
+          // 1. Database-Level Snapshot
           await prisma.yjsSnapshot.upsert({
             where: { room },
             update: { fileId, state: Buffer.from(update) },
             create: { room, fileId, state: Buffer.from(update) }
           });
+
+          // 2. S3/MinIO-Level Checkpoint (Merkle Root)
+          // We get the list of update hashes for this room to form the checkpoint.
+          // For simplicity in this step, we'll archive the full snapshot as a chunk.
+          const snapHash = await historyService.archiveUpdate(Buffer.from(update));
+          await historyService.createCheckpoint(room, [snapHash]);
+          logger.info(`✅ Created Merkle checkpoint for room ${room}`);
         } catch (err) {
-          console.error('Failed to persist Yjs snapshot', err);
+          logger.error('Failed to persist Yjs snapshot and create checkpoint', err);
         }
       }, 1000)
     );
@@ -114,14 +148,32 @@ const createCollabServer = async ({ httpServer, corsOrigin, redisUrl }) => {
 
       ydoc.on('update', async (update) => {
         try {
+          // 1. Persist to Redis Stream for high-performance op log
+          if (redisUrl && pubClient?.isOpen) {
+            const streamKey = `yjs:stream:${room}`;
+            await pubClient.xAdd(streamKey, '*', {
+              update: Buffer.from(update).toString('base64')
+            }, {
+              TRIM: {
+                strategy: 'MAXLEN',
+                strategyModifier: '~',
+                threshold: 1000 // Keep last 1000 ops in stream for recovery
+              }
+            });
+          }
+
+          // 2. Background persistence to Prisma
           await prisma.yjsUpdate.create({
             data: {
               room,
               update: Buffer.from(update)
             }
           });
+
+          // 3. Incremental Archiving to S3
+          await historyService.archiveUpdate(Buffer.from(update));
         } catch (err) {
-          console.error('Failed to persist yjs update', err);
+          logger.error('Failed to persist yjs update', err);
         }
       });
     } catch (err) {
