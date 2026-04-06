@@ -13,3 +13,9 @@ frontend/dist/
 
 coverage/
 
+# Testing & Logs
+*_output.txt
+*_output_utf8.txt
+*test_keys.json
+*private_key*
+*public_key*
